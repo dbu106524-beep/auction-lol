@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎴 카드예측 랭킹전 — 진행자</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a14;--surface:#13131f;--surface2:#1c1c2e;--border:#2a2a42;--gold:#f5c542;--gold2:#e8a800;--red:#e84040;--blue:#4a90e2;--green:#3ecf6f;--purple:#a855f7;--text:#f0f0f8;--muted:#8888aa;--card-w:110px;--card-h:155px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Nanum Gothic',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 20%,#1a1035 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,#0d1a2e 0%,transparent 60%);pointer-events:none;z-index:0;}
+#header{position:relative;z-index:10;background:linear-gradient(135deg,#1a0a2e,#0a1a2e);border-bottom:2px solid var(--gold);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 30px rgba(245,197,66,.15);}
+#header h1{font-family:'Black Han Sans',sans-serif;font-size:clamp(14px,2.4vw,23px);background:linear-gradient(135deg,var(--gold),#fff,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap;}
+.hdr-right{display:flex;gap:10px;align-items:center;flex-shrink:0;}
+.hdr-badge{font-size:13px;color:var(--muted);white-space:nowrap;}
+.hdr-badge span{color:var(--gold);font-weight:800;}
+#conn-status{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:800;}
+#conn-status.online{background:rgba(62,207,111,.2);border:1px solid var(--green);color:var(--green);}
+#conn-status.offline{background:rgba(232,64,64,.2);border:1px solid var(--red);color:var(--red);}
+.role-badge{background:rgba(232,64,64,.2);border:1px solid var(--red);color:var(--red);font-size:12px;font-weight:800;padding:3px 10px;border-radius:20px;}
+#app{position:relative;z-index:1;display:grid;grid-template-columns:300px 1fr 260px;height:calc(100vh - 57px);}
+.panel{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.panel-right{border-right:none;border-left:1px solid var(--border);}
+.panel-title{font-family:'Black Han Sans',sans-serif;font-size:15px;letter-spacing:2px;padding:11px 14px;background:var(--surface2);border-bottom:1px solid var(--border);color:var(--gold);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.panel-body{flex:1;overflow-y:auto;padding:10px;}
+.panel-body::-webkit-scrollbar{width:4px;}
+.panel-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+#center{display:flex;flex-direction:column;overflow:hidden;}
+#stage{flex:1;display:flex;flex-direction:column;align-items:center;padding:16px;overflow-y:auto;gap:14px;}
+#stage::-webkit-scrollbar{width:4px;}
+#stage::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.screen{display:none;width:100%;}
+.screen.active{display:block;}
+.box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:22px;max-width:500px;margin:0 auto;}
+.box h2{font-family:'Black Han Sans',sans-serif;font-size:22px;color:var(--gold);margin-bottom:16px;text-align:center;}
+.input-row{display:flex;gap:8px;margin-bottom:10px;}
+input[type=text]{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:10px 13px;font-family:'Nanum Gothic',sans-serif;font-size:16px;outline:none;transition:border-color .2s;}
+input[type=text]:focus{border-color:var(--gold);}
+input::placeholder{color:var(--muted);}
+.btn{padding:10px 18px;border:none;border-radius:6px;font-family:'Nanum Gothic',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn:active{transform:scale(.97);}
+.btn-gold{background:var(--gold);color:#000;}.btn-gold:hover{background:var(--gold2);}
+.btn-blue{background:var(--blue);color:#fff;}.btn-blue:hover{background:#357abd;}
+.btn-green{background:var(--green);color:#000;}.btn-green:hover{background:#2eaf58;}
+.btn-red{background:var(--red);color:#fff;}.btn-red:hover{background:#c0392b;}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}.btn-ghost:hover{border-color:var(--muted);color:var(--text);}
+.btn-full{width:100%;}
+.divider{height:1px;background:var(--border);margin:14px 0;}
+.section-label{font-size:13px;color:var(--muted);font-weight:800;letter-spacing:1px;margin-bottom:8px;}
+#room-code-box{background:linear-gradient(135deg,rgba(245,197,66,.1),rgba(245,197,66,.03));border:2px solid var(--gold);border-radius:12px;padding:18px;text-align:center;margin-bottom:16px;}
+#room-code-box .label{font-size:13px;color:var(--muted);margin-bottom:6px;}
+#room-code-display{font-family:'Black Han Sans',sans-serif;font-size:42px;color:var(--gold);letter-spacing:10px;}
+#room-code-box .hint{font-size:12px;color:var(--muted);margin-top:6px;}
+#lobby-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.lobby-chip{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:15px;animation:slideIn .25s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.lobby-chip .lc-name{font-weight:800;}
+.lobby-chip .lc-status{font-size:12px;color:var(--green);}
+.lobby-chip .lc-kick{cursor:pointer;color:var(--red);font-size:16px;margin-left:8px;transition:color .15s;}
+.lobby-chip .lc-kick:hover{color:#ff6b6b;}
+#player-status-wrap{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:4px;}
+#player-status-title{padding:8px 14px;font-family:'Black Han Sans',sans-serif;font-size:14px;color:var(--gold);background:var(--surface);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.ps-row{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid rgba(42,42,66,.4);font-size:14px;}
+.ps-row:last-child{border-bottom:none;}
+.ps-name{font-weight:800;}
+.ps-online{color:var(--green);font-size:12px;}
+.ps-offline{color:var(--muted);font-size:12px;}
+#round-card-area{display:flex;flex-direction:column;align-items:center;gap:10px;}
+#round-label{font-family:'Black Han Sans',sans-serif;font-size:26px;color:var(--gold);}
+#card-hint{font-size:15px;color:var(--muted);}
+.card-wrap{perspective:800px;}
+.card-inner{width:var(--card-w);height:var(--card-h);position:relative;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.4,0,.2,1);}
+.card-inner.flipped{transform:rotateY(180deg);}
+.card-face{position:absolute;inset:0;border-radius:10px;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;user-select:none;}
+.card-back{background:linear-gradient(135deg,#1a237e,#4a148c);border:2px solid rgba(255,255,255,.2);}
+.card-back::after{content:'🂠';font-size:60px;filter:drop-shadow(0 0 10px rgba(255,255,255,.3));}
+.card-front{background:#fff;border:2px solid #ccc;flex-direction:column;transform:rotateY(180deg);padding:6px;font-family:'Black Han Sans',sans-serif;}
+.card-front .c-suit{font-size:48px;line-height:1;}
+.card-front .c-num{font-size:20px;color:#000;}
+.card-front.red-card .c-suit,.card-front.red-card .c-num{color:#e84040;}
+#pred-table-wrap{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+#pred-table-title{padding:10px 16px;font-family:'Black Han Sans',sans-serif;font-size:16px;color:var(--gold);background:var(--surface);border-bottom:1px solid var(--border);}
+#pred-table{width:100%;border-collapse:collapse;}
+#pred-table th{padding:10px;font-size:14px;font-weight:800;color:var(--muted);text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;}
+#pred-table td{padding:9px 8px;text-align:center;border-bottom:1px solid rgba(42,42,66,.5);font-size:15px;vertical-align:middle;}
+#pred-table tr:last-child td{border-bottom:none;}
+.badge{display:inline-block;padding:3px 9px;border-radius:4px;font-size:13px;font-weight:800;white-space:nowrap;}
+.badge-suit{background:rgba(74,144,226,.25);color:#7ec8ff;}
+.badge-num{background:rgba(62,207,111,.25);color:#3ecf6f;}
+.badge-both{background:rgba(245,197,66,.25);color:var(--gold);}
+.badge-miss{background:rgba(200,200,200,.1);color:var(--muted);}
+.badge-bonus{background:rgba(168,85,247,.25);color:#d09aff;}
+.badge-wait{background:rgba(255,255,255,.05);color:var(--muted);}
+.badge-done{background:rgba(62,207,111,.15);color:var(--green);}
+#bottom-bar{flex-shrink:0;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;}
+.rank-row{display:grid;grid-template-columns:34px 1fr auto auto;gap:8px;align-items:center;padding:10px 8px;border-bottom:1px solid rgba(42,42,66,.5);}
+.rank-row:last-child{border-bottom:none;}
+.rank-num{font-family:'Black Han Sans',sans-serif;font-size:19px;text-align:center;}
+.rank-1{color:var(--gold)}.rank-2{color:#c0c0c0}.rank-3{color:#cd7f32}.rank-other{color:var(--muted);}
+.rank-name{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rank-score{font-family:'Black Han Sans',sans-serif;font-size:20px;color:var(--gold);white-space:nowrap;}
+.rank-streak{font-size:13px;color:var(--purple);white-space:nowrap;}
+.hist-round{margin-bottom:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.hist-round-title{padding:7px 12px;font-size:14px;font-weight:800;color:var(--muted);background:var(--surface2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;}
+.hist-entry{display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;padding:6px 12px;font-size:14px;border-bottom:1px solid rgba(42,42,66,.3);}
+.hist-entry:last-child{border-bottom:none;}
+#result-overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.85);align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+#result-overlay.show{display:flex;}
+#result-box{background:var(--surface2);border:2px solid var(--gold);border-radius:16px;padding:28px;min-width:340px;max-width:92vw;text-align:center;animation:pop .35s cubic-bezier(.2,.8,.3,1.3);}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+#result-box h2{font-family:'Black Han Sans',sans-serif;font-size:26px;color:var(--gold);margin-bottom:8px;}
+#result-card-display{font-size:64px;margin:10px 0;}
+#result-list{margin:14px 0;text-align:left;display:flex;flex-direction:column;gap:5px;}
+.result-player-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg);border-radius:6px;font-size:15px;}
+.result-player-name{font-weight:800;}.result-points{color:var(--gold);font-weight:800;}
+#final-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.95);align-items:center;justify-content:center;flex-direction:column;}
+#final-overlay.show{display:flex;}
+#final-box{background:linear-gradient(135deg,#1a1035,#0a1a2e);border:2px solid var(--gold);border-radius:16px;padding:30px;text-align:center;max-width:460px;width:90vw;animation:pop .5s ease;}
+#final-box h2{font-family:'Black Han Sans',sans-serif;font-size:30px;color:var(--gold);margin-bottom:20px;}
+.podium-wrap{display:flex;align-items:flex-end;justify-content:center;gap:10px;margin-bottom:20px;}
+.podium-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.podium-name{font-size:15px;font-weight:800;max-width:80px;word-break:break-all;}
+.podium-score{font-family:'Black Han Sans',sans-serif;font-size:17px;color:var(--gold);}
+.podium-block{width:70px;border-radius:6px 6px 0 0;display:flex;align-items:center;justify-content:center;font-family:'Black Han Sans',sans-serif;font-size:22px;}
+.p1 .podium-block{height:100px;background:linear-gradient(180deg,var(--gold),#8b6914);color:#000;}
+.p2 .podium-block{height:70px;background:linear-gradient(180deg,#c0c0c0,#808080);color:#000;}
+.p3 .podium-block{height:50px;background:linear-gradient(180deg,#cd7f32,#7a4a1e);color:#fff;}
+#final-rest{display:flex;flex-direction:column;gap:4px;margin-bottom:16px;}
+.final-rest-row{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:rgba(255,255,255,.05);border-radius:6px;font-size:15px;}
+#waiting-msg{color:var(--green);font-size:17px;text-align:center;padding:16px;font-weight:800;}
+.empty-msg{color:var(--muted);font-size:15px;text-align:center;padding:20px;}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--gold);color:var(--text);padding:12px 24px;border-radius:8px;font-size:16px;font-weight:800;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div id="header">
+  <h1>🃏 강세원의 뒷면 카드 예측 랭킹전</h1>
+  <div class="hdr-right">
+    <div class="hdr-badge">라운드 <span id="hdr-round">-</span> | 참가자 <span id="hdr-players">0</span>명</div>
+    <div id="conn-status" class="offline">오프라인</div>
+    <div class="role-badge">📋 진행자</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="panel">
+    <div class="panel-title">🏆 실시간 순위</div>
+    <div class="panel-body" id="ranking-body"><div class="empty-msg">게임 시작 후 표시됩니다</div></div>
+  </div>
+
+  <div id="center">
+    <div id="stage">
+
+      <!-- 방 생성 -->
+      <div id="screen-setup" class="screen active">
+        <div class="box">
+          <h2>📋 진행자 설정</h2>
+          <div class="section-label">방 코드 입력</div>
+          <div class="input-row">
+            <input type="text" id="room-input" placeholder="방 코드 (예: CARD01)" maxlength="10" style="text-transform:uppercase;font-size:20px;letter-spacing:4px;font-weight:800;text-align:center;">
+            <button class="btn btn-blue" onclick="createRoom()">방 생성</button>
+          </div>
+          <div style="font-size:13px;color:var(--muted);margin-top:4px;">플레이어들이 이 코드로 직접 입장합니다</div>
+        </div>
+      </div>
+
+      <!-- 대기방 -->
+      <div id="screen-lobby" class="screen">
+        <div class="box" style="max-width:540px;">
+          <h2>🚪 대기방</h2>
+          <div id="room-code-box">
+            <div class="label">플레이어에게 이 코드를 공유하세요</div>
+            <div id="room-code-display">----</div>
+            <div class="hint">플레이어 화면 → 방 코드 + 원하는 닉네임 입력 → 입장</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div class="section-label" style="margin-bottom:0;">입장한 플레이어</div>
+            <div style="font-size:14px;color:var(--muted);"><span id="lobby-num" style="color:var(--gold);font-weight:800;">0</span>명 입장 중</div>
+          </div>
+          <div id="lobby-list"><div class="empty-msg">아직 입장한 플레이어가 없습니다<br><span style="font-size:12px;">플레이어 화면에서 방 코드를 입력하면 자동으로 나타납니다</span></div></div>
+          <div class="divider"></div>
+          <button class="btn btn-green btn-full" onclick="startGame()" style="font-size:18px;padding:14px;">🚀 게임 시작 (<span id="start-count">0</span>명)</button>
+          <div style="font-size:13px;color:var(--muted);text-align:center;margin-top:8px;">최소 2명 이상 입장해야 시작 가능합니다</div>
+        </div>
+      </div>
+
+      <!-- 라운드 -->
+      <div id="screen-round" class="screen">
+        <div id="player-status-wrap">
+          <div id="player-status-title">
+            <span>👥 예측 현황</span>
+            <span id="pred-count-badge" style="font-size:13px;color:var(--muted);">0/0 완료</span>
+          </div>
+          <div id="player-status-list"></div>
+        </div>
+        <div id="round-card-area">
+          <div id="round-label">라운드 1</div>
+          <div class="card-wrap">
+            <div class="card-inner" id="main-card">
+              <div class="card-face card-back"></div>
+              <div class="card-face card-front" id="card-front-display">
+                <div class="c-suit"></div><div class="c-num"></div>
+              </div>
+            </div>
+          </div>
+          <div id="card-hint">예측 대기 중...</div>
+        </div>
+        <div id="pred-table-wrap">
+          <div id="pred-table-title">📝 플레이어 예측 내역</div>
+          <table id="pred-table">
+            <thead><tr><th>플레이어</th><th>문양</th><th>숫자</th><th>상태</th><th>결과</th></tr></thead>
+            <tbody id="pred-tbody"></tbody>
+          </table>
+        </div>
+        <div id="waiting-msg" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div id="bottom-bar" style="display:none;">
+      <button class="btn btn-gold" id="btn-reveal" onclick="revealCard()" style="display:none;">🎴 카드 공개</button>
+      <button class="btn btn-blue" id="btn-next" onclick="nextRound()" style="display:none;">▶ 다음 라운드</button>
+      <button class="btn btn-red" id="btn-end" onclick="endGame()" style="display:none;">🏁 게임 종료</button>
+      <button class="btn btn-ghost" onclick="resetGame()">↩ 처음으로</button>
+    </div>
+  </div>
+
+  <div class="panel panel-right">
+    <div class="panel-title">📜 라운드 기록</div>
+    <div class="panel-body" id="history-body"><div class="empty-msg">기록이 없습니다</div></div>
+  </div>
+</div>
+
+<div id="result-overlay">
+  <div id="result-box">
+    <h2 id="result-title">카드 공개!</h2>
+    <div id="result-card-display"></div>
+    <div id="result-list"></div>
+    <button class="btn btn-gold btn-full" onclick="closeResult()">확인</button>
+  </div>
+</div>
+<div id="final-overlay">
+  <div id="final-box">
+    <h2>🏆 최종 결과</h2>
+    <div class="podium-wrap" id="podium"></div>
+    <div id="final-rest"></div>
+    <button class="btn btn-gold btn-full" onclick="resetGame()">🔄 새 게임 시작</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey:"AIzaSyB2XBCwviok68_RokWMmI8B9Q4QexODzgo",
+  authDomain:"action-lol-2601.firebaseapp.com",
+  databaseURL:"https://action-lol-2601-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"action-lol-2601",
+  storageBucket:"action-lol-2601.firebasestorage.app",
+  messagingSenderId:"87438019571",
+  appId:"1:87438019571:web:217901e16dd09c423ce086"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const SUITS=['♠','♥','♦','♣'];
+const SUIT_COLORS={'♠':'#4a90e2','♥':'#e84040','♦':'#e84040','♣':'#4a90e2'};
+const NUMS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const RED_SUITS=['♥','♦'];
+
+let roomCode='', players=[], round=0, deck=[], gamePhase='setup', unsubPreds=null;
+
+function buildDeck(){const d=[];for(const s of SUITS)for(const n of NUMS)d.push({suit:s,num:n});for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}return d;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function safeKey(n){return n.replace(/[.#$\[\]/]/g,'_');}
+
+onValue(ref(db,'.info/connected'),snap=>{
+  const el=document.getElementById('conn-status');
+  if(snap.val()){el.textContent='온라인';el.className='online';}
+  else{el.textContent='오프라인';el.className='offline';}
+});
+
+document.getElementById('room-input').addEventListener('keydown',e=>{
+  document.getElementById('room-input').value=document.getElementById('room-input').value.toUpperCase();
+  if(e.key==='Enter') window.createRoom();
+});
+
+// ===== CREATE ROOM =====
+window.createRoom=async function(){
+  const code=document.getElementById('room-input').value.trim().toUpperCase();
+  if(!code){showToast('방 코드를 입력하세요');return;}
+  roomCode=code;
+
+  await set(ref(db,`rooms/${roomCode}`),{
+    phase:'lobby', round:0, players:{}, deck:[], history:[], predictions:{}, revealedCard:null
+  });
+
+  document.getElementById('room-code-display').textContent=roomCode;
+  document.getElementById('screen-setup').classList.remove('active');
+  document.getElementById('screen-lobby').classList.add('active');
+  listenLobby();
+  showToast(`방 [${roomCode}] 생성! 플레이어 입장 대기 중`);
+};
+
+// ===== LISTEN LOBBY (실시간 입장 감지) =====
+function listenLobby(){
+  onValue(ref(db,`rooms/${roomCode}/players`),snap=>{
+    const pData=snap.val()||{};
+    players=Object.values(pData).map(p=>({name:p.name,score:p.score||0,streak:p.streak||0}));
+    const count=players.length;
+    document.getElementById('lobby-num').textContent=count;
+    document.getElementById('start-count').textContent=count;
+    const list=document.getElementById('lobby-list');
+    if(!count){
+      list.innerHTML='<div class="empty-msg">아직 입장한 플레이어가 없습니다<br><span style="font-size:12px;">플레이어 화면에서 방 코드를 입력하면 자동으로 나타납니다</span></div>';
+      return;
+    }
+    list.innerHTML=players.map(p=>`
+      <div class="lobby-chip">
+        <span class="lc-name">👤 ${esc(p.name)}</span>
+        <span class="lc-status">🟢 입장 완료</span>
+        <span class="lc-kick" onclick="window.kickPlayer('${esc(p.name)}')" title="강제퇴장">✕</span>
+      </div>`).join('');
+  });
+}
+
+window.kickPlayer=async function(name){
+  await remove(ref(db,`rooms/${roomCode}/players/${safeKey(name)}`));
+  showToast(`${name} 퇴장 처리`);
+};
+
+// ===== START GAME =====
+window.startGame=async function(){
+  if(players.length<2){showToast('2명 이상 입장해야 시작 가능합니다');return;}
+  deck=buildDeck();round=0;
+  await update(ref(db,`rooms/${roomCode}`),{phase:'playing',deck:deck});
+  document.getElementById('screen-lobby').classList.remove('active');
+  document.getElementById('screen-round').classList.add('active');
+  document.getElementById('bottom-bar').style.display='flex';
+  document.getElementById('hdr-players').textContent=players.length;
+  nextRound();
+};
+
+// ===== NEXT ROUND =====
+window.nextRound=async function(){
+  round++;gamePhase='waiting';
+  document.getElementById('hdr-round').textContent=round;
+  document.getElementById('round-label').textContent=`라운드 ${round}`;
+  document.getElementById('btn-reveal').style.display='inline-block';
+  document.getElementById('btn-next').style.display='none';
+  document.getElementById('btn-end').style.display='none';
+  document.getElementById('waiting-msg').style.display='none';
+  document.getElementById('main-card').classList.remove('flipped');
+  document.getElementById('card-hint').textContent=`예측 대기 중... (남은 카드: ${deck.length}장)`;
+  await update(ref(db,`rooms/${roomCode}`),{phase:'waiting',round,predictions:{},revealedCard:null});
+  buildPredTable();renderRanking();listenPredictions();
+};
+
+function buildPredTable(){
+  const tbody=document.getElementById('pred-tbody');
+  const psList=document.getElementById('player-status-list');
+  tbody.innerHTML=players.map(p=>{const k=safeKey(p.name);return `<tr id="pred-row-${k}">
+    <td style="font-weight:800;font-size:15px;">${esc(p.name)}</td>
+    <td id="suit-cell-${k}"><span class="badge badge-wait">대기</span></td>
+    <td id="num-cell-${k}"><span class="badge badge-wait">대기</span></td>
+    <td id="done-cell-${k}"><span class="badge badge-wait">미완료</span></td>
+    <td id="result-cell-${k}"><span class="badge badge-wait">—</span></td>
+  </tr>`;}).join('');
+  psList.innerHTML=players.map(p=>{const k=safeKey(p.name);return `<div class="ps-row">
+    <span class="ps-name">${esc(p.name)}</span>
+    <span class="ps-online">🟢 온라인</span>
+    <span id="pspred-${k}" style="font-size:13px;color:var(--muted);">미입력</span>
+  </div>`;}).join('');
+  document.getElementById('pred-count-badge').textContent=`0/${players.length} 완료`;
+}
+
+function listenPredictions(){
+  if(unsubPreds) unsubPreds();
+  unsubPreds=onValue(ref(db,`rooms/${roomCode}/predictions`),snap=>{
+    const preds=snap.val()||{};
+    let done=0;
+    players.forEach(p=>{
+      const k=safeKey(p.name);const pred=preds[k];const has=pred&&pred.suit&&pred.num;
+      if(has) done++;
+      const sc=document.getElementById(`suit-cell-${k}`);
+      const nc=document.getElementById(`num-cell-${k}`);
+      const dc=document.getElementById(`done-cell-${k}`);
+      const pp=document.getElementById(`pspred-${k}`);
+      if(has){
+        if(sc) sc.innerHTML=`<span style="font-size:20px;color:${SUIT_COLORS[pred.suit]}">${pred.suit}</span>`;
+        if(nc) nc.innerHTML=`<span style="font-weight:800;font-size:16px;">${pred.num}</span>`;
+        if(dc) dc.innerHTML=`<span class="badge badge-done">✅ 완료</span>`;
+        if(pp) pp.innerHTML=`<span style="color:var(--green);">입력완료</span>`;
+      } else {
+        if(sc) sc.innerHTML=`<span class="badge badge-wait">대기</span>`;
+        if(nc) nc.innerHTML=`<span class="badge badge-wait">대기</span>`;
+        if(dc) dc.innerHTML=`<span class="badge badge-wait">미완료</span>`;
+        if(pp) pp.innerHTML=`<span style="color:var(--muted);">미입력</span>`;
+      }
+    });
+    document.getElementById('pred-count-badge').textContent=`${done}/${players.length} 완료`;
+    const wm=document.getElementById('waiting-msg');
+    if(done===players.length&&players.length>0){wm.textContent='✅ 전원 입력 완료! 카드를 공개하세요.';wm.style.display='block';}
+    else wm.style.display='none';
+  });
+}
+
+window.revealCard=async function(){
+  if(deck.length===0){deck=buildDeck();showToast('🔄 덱 소진! 새 덱으로 섞었습니다');}
+  const drawn=deck.pop();
+  const front=document.getElementById('card-front-display');
+  front.querySelector('.c-suit').textContent=drawn.suit;
+  front.querySelector('.c-num').textContent=drawn.num;
+  front.classList.toggle('red-card',RED_SUITS.includes(drawn.suit));
+  document.getElementById('main-card').classList.add('flipped');
+  document.getElementById('card-hint').textContent=`${drawn.suit} ${drawn.num} | 남은 카드: ${deck.length}장`;
+  document.getElementById('btn-reveal').style.display='none';
+  gamePhase='revealed';
+  await update(ref(db,`rooms/${roomCode}`),{phase:'revealed',revealedCard:drawn,deck:deck});
+  setTimeout(()=>calcResults(drawn),800);
+};
+
+async function calcResults(card){
+  const predsSnap=await get(ref(db,`rooms/${roomCode}/predictions`));
+  const preds=predsSnap.val()||{};
+  const {suit:cs,num:cn}=card;
+  const resultData=[];const scoreUpdates={};
+  const histEntry={round,card:`${cs}${cn}`,results:{}};
+  players.forEach(p=>{
+    const k=safeKey(p.name);const pred=preds[k]||{suit:null,num:null};
+    const suitOk=pred.suit===cs,numOk=pred.num===cn;
+    let pts=0;if(suitOk&&numOk)pts=5;else if(numOk)pts=3;else if(suitOk)pts=1;
+    if(suitOk||numOk)p.streak++;else p.streak=0;
+    let bonus=0;if(p.streak===2)bonus=2;else if(p.streak>=3)bonus=5;
+    p.score=(p.score||0)+pts+bonus;
+    scoreUpdates[`rooms/${roomCode}/players/${k}/score`]=p.score;
+    scoreUpdates[`rooms/${roomCode}/players/${k}/streak`]=p.streak;
+    histEntry.results[k]={pred:`${pred.suit||'?'}${pred.num||'?'}`,pts,bonus,suitOk,numOk,streak:p.streak};
+    const rc=document.getElementById(`result-cell-${k}`);
+    if(rc){
+      let b=suitOk&&numOk?`<span class="badge badge-both">🎯완전일치+5</span>`:numOk?`<span class="badge badge-num">숫자+3</span>`:suitOk?`<span class="badge badge-suit">문양+1</span>`:`<span class="badge badge-miss">미스</span>`;
+      if(bonus>0) b+=` <span class="badge badge-bonus">🔥+${bonus}</span>`;
+      rc.innerHTML=b;
+    }
+    resultData.push({name:p.name,pts,bonus,suitOk,numOk,streak:p.streak});
+  });
+  await update(ref(db),scoreUpdates);
+  const histSnap=await get(ref(db,`rooms/${roomCode}/history`));
+  const hist=histSnap.val()||[];hist.push(histEntry);
+  await update(ref(db,`rooms/${roomCode}`),{history:hist,phase:'result',lastResult:{card:`${cs}${cn}`,results:histEntry.results}});
+  addHistoryUI(cs,cn,resultData);renderRanking();showResult(cs,cn,resultData);
+  document.getElementById('btn-next').style.display='inline-block';
+  document.getElementById('btn-end').style.display='inline-block';
+}
+
+function renderRanking(){
+  const sorted=[...players].sort((a,b)=>b.score-a.score);
+  const body=document.getElementById('ranking-body');
+  if(!sorted.length){body.innerHTML='<div class="empty-msg">게임 시작 후 표시됩니다</div>';return;}
+  body.innerHTML=sorted.map((p,i)=>{
+    const cls=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
+    const icon=i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+    const streak=p.streak>=2?`🔥${p.streak}연속`:'';
+    return `<div class="rank-row"><div class="rank-num ${cls}">${icon}</div><div class="rank-name">${esc(p.name)}</div><div class="rank-streak">${streak}</div><div class="rank-score">${p.score}점</div></div>`;
+  }).join('');
+}
+
+function showResult(suit,num,data){
+  document.getElementById('result-title').textContent=`라운드 ${round} 결과`;
+  document.getElementById('result-card-display').textContent=`${suit} ${num}`;
+  document.getElementById('result-card-display').style.color=RED_SUITS.includes(suit)?'#e84040':'#fff';
+  const sorted=[...data].sort((a,b)=>(b.pts+b.bonus)-(a.pts+a.bonus));
+  document.getElementById('result-list').innerHTML=sorted.map(d=>{
+    const total=d.pts+d.bonus;
+    let tag=d.suitOk&&d.numOk?'<span class="badge badge-both">완전일치</span>':d.numOk?'<span class="badge badge-num">숫자</span>':d.suitOk?'<span class="badge badge-suit">문양</span>':'<span class="badge badge-miss">미스</span>';
+    const bt=d.bonus>0?`<span class="badge badge-bonus">🔥${d.streak}연속</span>`:'';
+    return `<div class="result-player-row"><span class="result-player-name">${esc(d.name)}</span><span>${tag}${bt}</span><span class="result-points">${total>0?'+':''}${total}점</span></div>`;
+  }).join('');
+  document.getElementById('result-overlay').classList.add('show');
+}
+window.closeResult=function(){document.getElementById('result-overlay').classList.remove('show');};
+
+function addHistoryUI(suit,num,data){
+  const body=document.getElementById('history-body');
+  if(body.querySelector('.empty-msg')) body.innerHTML='';
+  const div=document.createElement('div');div.className='hist-round';
+  const rows=data.map(d=>{
+    const res=d.suitOk&&d.numOk?'🎯':d.numOk?'🔢':d.suitOk?'🎨':'❌';
+    return `<div class="hist-entry"><span>${esc(d.name)}</span><span style="color:var(--muted)">${d.pred||''}</span><span>${res}</span><span style="color:var(--gold);font-weight:800">${d.pts+d.bonus>0?'+':''}${d.pts+d.bonus}</span></div>`;
+  }).join('');
+  div.innerHTML=`<div class="hist-round-title"><span>라운드 ${round}</span><span style="color:${RED_SUITS.includes(suit)?'#e84040':'#fff'};font-weight:800;">${suit} ${num}</span></div>${rows}`;
+  body.insertBefore(div,body.firstChild);
+}
+
+window.endGame=async function(){
+  await update(ref(db,`rooms/${roomCode}`),{phase:'ended'});
+  const sorted=[...players].sort((a,b)=>b.score-a.score);
+  const top3=sorted.slice(0,3),rest=sorted.slice(3);
+  const order=[top3[1],top3[0],top3[2]].filter(Boolean);
+  const classes=top3[1]?['p2','p1','p3']:top3[2]?['p1','p3']:['p1'];
+  const labels=top3[1]?['🥈','🥇','🥉']:top3[2]?['🥇','🥉']:['🥇'];
+  document.getElementById('podium').innerHTML=order.map((p,i)=>`<div class="podium-item ${classes[i]}"><div class="podium-name">${esc(p.name)}</div><div class="podium-score">${p.score}점</div><div class="podium-block">${labels[i]}</div></div>`).join('');
+  document.getElementById('final-rest').innerHTML=rest.map((p,i)=>`<div class="final-rest-row"><span>${i+4}위 ${esc(p.name)}</span><span style="color:var(--gold);font-weight:800">${p.score}점</span></div>`).join('');
+  document.getElementById('final-overlay').classList.add('show');
+};
+
+window.resetGame=async function(){
+  if(roomCode) await remove(ref(db,`rooms/${roomCode}`));
+  players=[];round=0;deck=[];roomCode='';gamePhase='setup';
+  document.getElementById('final-overlay').classList.remove('show');
+  document.getElementById('result-overlay').classList.remove('show');
+  ['screen-round','screen-lobby'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('screen-setup').classList.add('active');
+  document.getElementById('bottom-bar').style.display='none';
+  document.getElementById('hdr-round').textContent='-';
+  document.getElementById('hdr-players').textContent='0';
+  document.getElementById('history-body').innerHTML='<div class="empty-msg">기록이 없습니다</div>';
+  document.getElementById('ranking-body').innerHTML='<div class="empty-msg">게임 시작 후 표시됩니다</div>';
+  document.getElementById('room-input').value='';
+};
+
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
