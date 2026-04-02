@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>강세원배 — 관전자 화면</title>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+:root{
+  --bg:#07090f; --bg2:#0d1120; --bg3:#131828;
+  --gold:#c89b3c; --gold2:#f0c060;
+  --white:#fff; --sub:#8090b0; --muted:#4a5578;
+  --green:#3ecf7a; --red:#ef4444; --blue:#4f8ef0;
+  --border:#1a2040;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--white);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;top:-200px;left:-200px;width:700px;height:700px;background:radial-gradient(circle,rgba(200,155,60,.05) 0%,transparent 70%);pointer-events:none;z-index:0;}
+
+/* ── 입장 화면 ── */
+.join{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;padding:24px;}
+.jtitle{font-family:'Black Han Sans',sans-serif;font-size:26px;text-align:center;}
+.jtitle span{color:var(--gold);}
+.jbox{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:380px;}
+.jbox h3{font-size:12px;color:var(--gold);margin-bottom:14px;letter-spacing:1px;}
+.jinp{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--white);font-size:20px;font-weight:800;padding:13px 16px;border-radius:8px;outline:none;text-transform:uppercase;letter-spacing:4px;text-align:center;margin-bottom:10px;}
+.jinp:focus{border-color:var(--gold);}
+.jbtn{width:100%;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#07090f;font-size:15px;font-weight:700;padding:13px;border-radius:8px;border:none;cursor:pointer;}
+.jerr{font-size:12px;color:var(--red);text-align:center;margin-top:8px;min-height:16px;}
+.jwait{font-size:13px;color:var(--sub);text-align:center;animation:blink 1.5s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* ── 헤더 ── */
+.header{position:relative;z-index:10;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;}
+.htitle{font-family:'Black Han Sans',sans-serif;font-size:17px;}
+.htitle span{color:var(--gold);}
+.hright{display:flex;align-items:center;gap:10px;}
+.hbadge{font-size:11px;color:var(--sub);}
+.hbadge strong{color:var(--gold);}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.view-badge{background:rgba(79,142,240,.15);border:1px solid var(--blue);color:var(--blue);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
+
+/* ── 레이아웃 ── */
+.layout{position:relative;z-index:1;display:grid;grid-template-columns:1fr 320px;gap:14px;padding:14px;max-width:1560px;margin:0 auto;}
+.left{display:flex;flex-direction:column;gap:14px;}
+
+/* ── 카드 공통 ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.card-head{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.card-label{font-size:10px;font-weight:700;letter-spacing:2px;}
+.gold{color:var(--gold);}
+.blue{color:var(--blue);}
+.green{color:var(--green);}
+.sub{color:var(--sub);}
+
+/* ── 현재 경매 선수 ── */
+.player-stage{padding:24px 28px;display:flex;gap:24px;align-items:flex-start;}
+.p-avatar{width:90px;height:90px;border-radius:14px;background:linear-gradient(135deg,#1a2040,#252d50);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:42px;flex-shrink:0;box-shadow:0 0 30px rgba(200,155,60,.25);}
+.p-info{flex:1;}
+.p-name{font-family:'Black Han Sans',sans-serif;font-size:36px;line-height:1;margin-bottom:10px;}
+.p-infobox{display:grid;grid-template-columns:repeat(4,auto);gap:6px 20px;margin-bottom:8px;}
+.info-item{display:flex;flex-direction:column;gap:2px;}
+.info-lbl{font-size:10px;color:var(--muted);letter-spacing:1px;font-weight:700;}
+.info-val{font-size:14px;color:var(--white);font-weight:700;}
+.info-val.gold{color:var(--gold);}
+.info-val.blue{color:var(--blue);}
+.info-val.green{color:var(--green);}
+.info-appeal{padding:8px 12px;background:rgba(200,155,60,.07);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;font-size:13px;color:var(--gold2);font-style:italic;}
+.p-status{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.stag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--bg3);border:1px solid var(--border);color:var(--sub);}
+
+/* ── 입찰 현황 ── */
+.bid-panel{padding:18px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.bid-box{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 18px;}
+.bid-lbl{font-size:10px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;}
+.bid-num{font-family:'Black Han Sans',sans-serif;font-size:42px;color:var(--gold);line-height:1;}
+.bid-num span{font-size:16px;}
+.bid-who{font-size:12px;color:var(--sub);margin-top:4px;}
+.bid-who strong{color:var(--white);}
+
+/* ── 카운트다운 ── */
+.cd-wrap{padding:0 24px 16px;display:none;}
+.cd-wrap.active{display:block;}
+.cd-bar-bg{height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;margin-bottom:6px;}
+.cd-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--gold));border-radius:5px;transition:width .9s linear,background .3s;}
+.cd-bar.urgent{background:linear-gradient(90deg,var(--red),#ff6600);}
+.cd-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--sub);}
+.cd-num{font-family:'Black Han Sans',sans-serif;font-size:28px;color:var(--green);}
+.cd-num.urgent{color:var(--red);animation:urg .5s infinite;}
+@keyframes urg{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ── 입찰 로그 ── */
+.log-wrap{margin:0 24px 16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;max-height:110px;overflow-y:auto;}
+.log-head{padding:7px 12px;border-bottom:1px solid var(--border);font-size:10px;color:var(--muted);letter-spacing:1px;font-weight:700;}
+.log-row{padding:7px 12px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #0d1020;font-size:12px;animation:fi .2s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+.log-row:last-child{border-bottom:none;}
+.lo{color:var(--muted);width:20px;font-size:10px;}
+.ln{color:var(--gold);font-weight:700;width:80px;}
+.lp{font-weight:700;margin-left:auto;}
+.lp.hi{color:var(--gold);}
+.lbadge{font-size:9px;padding:1px 6px;border-radius:8px;background:#17140a;color:var(--gold);border:1px solid var(--gold);}
+
+/* ── 경매 큐 ── */
+.qlist{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));padding:12px 14px;gap:8px;}
+.qi{min-width:0;padding:10px 6px;text-align:center;border-radius:10px;border:1px solid transparent;background:rgba(19,24,40,.45);}
+.qi.cur{background:#17140a;border-color:var(--gold);}
+.qi.dn{opacity:.3;}
+.qi.dn .qn{text-decoration:line-through;}
+.qidx{font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:700;}
+.qem{font-size:18px;margin-bottom:2px;}
+.qtier{font-size:9px;color:var(--gold);font-weight:700;margin-bottom:2px;}
+.qn{font-size:10px;color:var(--sub);line-height:1.3;word-break:break-word;}
+.qi.cur .qn{color:var(--gold);font-weight:700;}
+
+/* ── 팀장 패널 (오른쪽) ── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;max-height:calc(100vh - 90px);display:flex;flex-direction:column;}
+.ph{padding:13px 16px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--gold);letter-spacing:2px;}
+.plist{overflow-y:auto;flex:1;}
+.plist::-webkit-scrollbar{width:3px;}
+.plist::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.ac-row{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.ac-row:hover{background:var(--bg3);}
+.ac-row:last-child{border-bottom:none;}
+.ac-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.ac-ord{width:22px;height:22px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);font-size:9px;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ac-name{font-size:13px;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ac-pts{font-size:12px;font-weight:800;color:var(--gold);flex-shrink:0;}
+.ac-pts.lo{color:var(--red);}
+.ac-slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-left:30px;}
+.slot{min-height:38px;border-radius:8px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);padding:4px 6px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.slot.ok{background:#0d1a28;border-color:var(--blue);color:#b9d7ff;font-size:12px;font-weight:800;}
+.slot.ldr{background:#17140a;border-color:var(--gold);color:var(--gold);font-size:14px;}
+
+/* ── 팀 상세 모달 ── */
+#detailModal{display:none;position:fixed;inset:0;z-index:200;background:rgba(7,9,15,.88);align-items:center;justify-content:center;backdrop-filter:blur(6px);}
+#detailModal.show{display:flex;}
+.dm-box{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px;width:440px;max-width:92vw;max-height:85vh;overflow-y:auto;animation:pop .25s ease;}
+@keyframes pop{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+@keyframes fi{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
+
+/* ── 낙찰/유찰 플래시 ── */
+.flash{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.flash-box{border-radius:22px;padding:36px 56px;text-align:center;animation:fa .9s ease forwards;}
+@keyframes fa{0%{opacity:0;transform:scale(.8);}20%{opacity:1;transform:scale(1.04);}70%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(.95);}}
+.flash-box.sold{background:linear-gradient(135deg,#17140a,#231a0a);border:2px solid var(--gold);}
+.flash-box.skip{background:linear-gradient(135deg,#1a0a0a,#2a1010);border:2px solid var(--red);}
+.fem{font-size:44px;margin-bottom:10px;display:block;}
+.ftit{font-family:'Black Han Sans',sans-serif;font-size:28px;margin-bottom:4px;}
+.flash-box.sold .ftit{color:var(--gold);}
+.flash-box.skip .ftit{color:var(--red);}
+.fsub{font-size:14px;color:var(--sub);}
+
+/* 대기 화면 */
+.waiting-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;}
+.waiting-screen .em{font-size:56px;}
+.waiting-screen .msg{font-family:'Black Han Sans',sans-serif;font-size:24px;color:var(--gold);}
+.waiting-screen .sub{font-size:13px;color:var(--sub);}
+
+/* 경매 완료 배너 */
+.end-banner{background:linear-gradient(135deg,#17140a,#231a0a);border:2px solid var(--gold);border-radius:16px;padding:20px 28px;text-align:center;margin-bottom:14px;}
+.end-banner .etitle{font-family:'Black Han Sans',sans-serif;font-size:28px;color:var(--gold);margin-bottom:6px;}
+
+@media(max-width:1200px){.layout{grid-template-columns:1fr;}.panel{max-height:320px;}}
+@media(max-width:640px){.p-infobox{grid-template-columns:repeat(2,auto);}.bid-panel{grid-template-columns:1fr;}.qlist{grid-template-columns:repeat(5,minmax(0,1fr));}}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- 입장 화면 -->
+<div class="join" id="joinScreen">
+  <div class="jtitle">강세원배 <span>증강 옥션 칼바람</span></div>
+  <div style="font-size:13px;color:var(--sub);">👁 관전자 화면</div>
+  <div class="jbox">
+    <h3>🔑 방 코드 입력</h3>
+    <input class="jinp" id="joinCode" placeholder="방 코드" maxlength="12"
+      oninput="this.value=this.value.toUpperCase()"
+      onkeydown="if(event.key==='Enter')document.getElementById('joinNick').focus()">
+    <h3 style="margin-top:12px;">👤 닉네임 입력</h3>
+    <input class="jinp" id="joinNick" placeholder="닉네임" maxlength="16" style="letter-spacing:1px;"
+      onkeydown="if(event.key==='Enter')joinRoom()">
+    <button class="jbtn" style="margin-top:10px;" onclick="joinRoom()">👁 관전 시작</button>
+    <div class="jerr" id="joinErr"></div>
+  </div>
+</div>
+
+<!-- 메인 앱 -->
+<div id="mainApp" style="display:none;">
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="dot"></div>
+      <div class="htitle">강세원배 <span>증강 옥션 칼바람</span></div>
+    </div>
+    <div class="hright">
+      <div class="hbadge">진행 <strong id="hProg">0/0</strong></div>
+      <div class="hbadge" id="hStatus">연결 중...</div>
+      <div class="view-badge">👁 관전자</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="left">
+
+      <!-- 대기 화면 -->
+      <div class="waiting-screen" id="waitingScreen">
+        <div class="em">⏳</div>
+        <div class="msg">경매 시작을 기다리는 중</div>
+        <div class="sub">진행자가 경매를 시작하면 자동으로 화면이 전환됩니다</div>
+      </div>
+
+      <!-- 경매 완료 배너 -->
+      <div class="end-banner" id="endBanner" style="display:none;">
+        <div class="etitle">🏆 경매 완료!</div>
+        <div style="font-size:13px;color:var(--sub);">모든 팀 구성이 완료되었습니다</div>
+      </div>
+
+      <!-- 현재 경매 선수 -->
+      <div class="card" id="playerCard" style="display:none;">
+        <div class="card-head">
+          <div class="card-label gold" id="stageLabel">🏪 현재 경매 중</div>
+          <div style="font-size:11px;color:var(--sub);">완료 <strong id="doneN" style="color:var(--gold);">0</strong> / <span id="totN">0</span></div>
+        </div>
+        <div class="player-stage">
+          <div class="p-avatar" id="pEmoji">?</div>
+          <div class="p-info">
+            <div class="p-name" id="pName">-</div>
+            <div class="p-infobox" id="pInfoBox"></div>
+            <div id="pAppeal"></div>
+            <div class="p-status" id="pStatus"></div>
+          </div>
+        </div>
+
+        <!-- 입찰 현황 -->
+        <div class="bid-panel">
+          <div class="bid-box">
+            <div class="bid-lbl">현재 최고 입찰가</div>
+            <div class="bid-num" id="bidNum">0<span>점</span></div>
+            <div class="bid-who" id="bidWho">입찰자 없음</div>
+          </div>
+          <div class="bid-box" style="display:flex;flex-direction:column;justify-content:center;align-items:center;">
+            <div class="bid-lbl" style="text-align:center;">⏱ 남은 시간</div>
+            <div class="cd-num" id="cdNum" style="font-family:'Black Han Sans',sans-serif;font-size:52px;color:var(--green);">-</div>
+          </div>
+        </div>
+
+        <!-- 카운트다운 바 -->
+        <div class="cd-wrap" id="cdWrap">
+          <div class="cd-bar-bg"><div class="cd-bar" id="cdBar" style="width:100%;"></div></div>
+          <div class="cd-row"><span>낙찰/유찰까지</span><span></span></div>
+        </div>
+
+        <!-- 입찰 로그 -->
+        <div class="log-wrap">
+          <div class="log-head">📋 입찰 내역</div>
+          <div id="logList"></div>
+        </div>
+      </div>
+
+      <!-- 경매 순서 큐 -->
+      <div class="card" id="queueCard" style="display:none;">
+        <div class="card-head">
+          <div class="card-label gold">📋 경매 순서</div>
+          <div style="font-size:11px;color:var(--sub);">완료 <strong id="doneQ" style="color:var(--gold);">0</strong> / <span id="totQ">0</span></div>
+        </div>
+        <div class="qlist" id="qList"></div>
+      </div>
+    </div>
+
+    <!-- 오른쪽: 팀장 현황 -->
+    <div class="panel" id="capsPanel" style="display:none;">
+      <div class="ph">👑 팀장 현황 <span style="font-size:9px;color:var(--muted);font-weight:400;">(클릭 시 상세)</span></div>
+      <div class="plist" id="capList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 팀 상세 모달 -->
+<div id="detailModal" onclick="this.classList.remove('show')">
+  <div class="dm-box" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div id="dmTitle" style="font-family:'Black Han Sans',sans-serif;font-size:20px;color:var(--gold);"></div>
+      <button onclick="document.getElementById('detailModal').classList.remove('show')"
+        style="background:var(--bg3);border:1px solid var(--border);color:var(--sub);font-size:13px;padding:5px 12px;border-radius:8px;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">잔여 포인트</div>
+        <div id="dmPts" style="font-family:'Black Han Sans',sans-serif;font-size:24px;color:var(--gold);"></div>
+      </div>
+      <div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">확보 팀원</div>
+        <div id="dmMemCnt" style="font-family:'Black Han Sans',sans-serif;font-size:24px;color:var(--white);"></div>
+      </div>
+      <div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">사용 포인트</div>
+        <div id="dmSpent" style="font-family:'Black Han Sans',sans-serif;font-size:24px;color:var(--sub);"></div>
+      </div>
+    </div>
+    <div id="dmMembers" style="display:flex;flex-direction:column;gap:7px;"></div>
+  </div>
+</div>
+
+<!-- 낙찰/유찰 플래시 -->
+<div class="flash" id="flash" style="display:none;">
+  <div class="flash-box" id="flashBox">
+    <span class="fem" id="fEm">🏆</span>
+    <div class="ftit" id="fTit">낙찰!</div>
+    <div class="fsub" id="fSub"></div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyB2XBCwviok68_RokWMmI8B9Q4QexODzgo",
+  authDomain: "action-lol-2601.firebaseapp.com",
+  databaseURL: "https://action-lol-2601-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "action-lol-2601",
+  storageBucket: "action-lol-2601.firebasestorage.app",
+  messagingSenderId: "87438019571",
+  appId: "1:87438019571:web:217901e16dd09c423ce086"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const ROLE_EM = {'탱커':'🛡️','딜러':'⚔️','서포터':'💊'};
+const TIER_EM = {'언랭':'⬜','아이언':'🪨','브론즈':'🟫','실버':'⚪','골드':'🟡','플래티넘':'🩵','에메랄드':'💚','다이아몬드':'💎','다이아':'💎','마스터':'🔮','그랜드마스터':'🔴','챌린저':'👑'};
+
+let state = null;
+let lastResultTs = 0;
+let cdTimer = null;
+let cdSec = 0;
+let serverOffset = 0;
+
+function toArr(o){if(!o)return[];if(Array.isArray(o))return o;return Object.values(o);}
+
+// 서버 시각 오프셋
+db.ref('.info/serverTimeOffset').on('value', s => { serverOffset = s.val()||0; });
+
+// 연결 상태
+db.ref('.info/connected').on('value', s => {
+  document.getElementById('hStatus').textContent = s.val() ? '🟢 실시간 연결' : '🔴 연결 끊김';
+});
+
+// ── 입장 ──
+document.getElementById('joinCode').addEventListener('keydown', e => {
+  document.getElementById('joinCode').value = document.getElementById('joinCode').value.toUpperCase();
+});
+
+let spectatorRoomCode = '';
+let spectatorJustJoined = false;
+
+function showToast(msg, type='green') {
+  const colors = { gold:'var(--gold)', green:'var(--green)', red:'var(--red)', sub:'var(--sub)', blue:'var(--blue)' };
+  const borders = { gold:'#c89b3c', green:'#3ecf7a', red:'#ef4444', sub:'#4a5578', blue:'#4f8ef0' };
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:999;background:var(--bg2);border:2px solid ${borders[type]||borders.green};border-radius:12px;padding:14px 28px;font-size:14px;font-weight:700;color:${colors[type]||colors.green};box-shadow:0 4px 24px rgba(0,0,0,.5);animation:fi .3s ease;text-align:center;white-space:nowrap;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function joinRoom() {
+  const code = document.getElementById('joinCode').value.trim().toUpperCase();
+  const nick = document.getElementById('joinNick').value.trim();
+  const err = document.getElementById('joinErr');
+  err.textContent = '';
+  if (!code) { err.textContent = '방 코드를 입력하세요'; return; }
+  if (!nick) { err.textContent = '닉네임을 입력하세요'; return; }
+
+  db.ref('roomCode').once('value', snap => {
+    const serverCode = (snap.val()||'').toUpperCase();
+    if (!serverCode) { err.textContent = '진행자가 아직 경매를 시작하지 않았습니다'; return; }
+    if (code !== serverCode) { err.textContent = '방 코드가 올바르지 않습니다'; return; }
+
+    spectatorRoomCode = serverCode;
+    document.getElementById('joinScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    spectatorJustJoined = true;
+    // 입장 직후 2초간 낙찰 플래시 억제
+    setTimeout(() => { spectatorJustJoined = false; }, 2000);
+    lastResultTs = Date.now(); // 입장 전 낙찰 기록 무시
+    startListening();
+    initChat(nick + ' (관전)');
+    showToast('👁 ' + nick + '님, 관전 입장 완료!', 'blue');
+    setTimeout(() => {
+      if (window._chatRef) window._chatRef.remove();
+    }, 60 * 60 * 1000);
+  });
+}
+
+// ── Firebase 구독 ──
+function startListening() {
+  // 경매 상태
+  db.ref('auction').on('value', snap => {
+    const raw = snap.val();
+    if (!raw) return;
+    const data = {
+      ...raw,
+      captains: toArr(raw.captains),
+      players: toArr(raw.players),
+      bidLog: toArr(raw.bidLog),
+      skipped: toArr(raw.skipped),
+    };
+    state = data;
+    renderAll(data);
+  });
+
+  // 카운트다운
+  db.ref('countdownSignal').on('value', snap => {
+    const d = snap.val();
+    if (!d || !d.running || !d.startedAt) { stopCd(); return; }
+    const elapsed = Math.floor((Date.now() + serverOffset - d.startedAt) / 1000);
+    const remaining = Math.max(0, 10 - elapsed);
+    if (remaining > 0) startCd(remaining);
+    else stopCd();
+  });
+
+  // 낙찰/유찰 결과
+  db.ref('auctionResult').on('value', snap => {
+    const d = snap.val();
+    if (!d || d.ts <= lastResultTs) return;
+    lastResultTs = d.ts;
+    showFlash(d);
+  });
+}
+
+// ── 전체 렌더 ──
+function renderAll(data) {
+  const players = data.players || [];
+  const captains = data.captains || [];
+  const active = data.isReauction
+    ? toArr(data.skipped).map(id => players.find(p => p.id === id)).filter(Boolean)
+    : players;
+
+  // 헤더
+  const soldCnt = players.filter(p => p.soldTo !== null && p.soldTo !== -1).length;
+  document.getElementById('hProg').textContent = `${soldCnt}/${players.length}명`;
+
+  // 대기 조건: 팀원이 없거나 경매가 아직 시작 안 됨
+  const waiting = !players.length;
+  // 종료 조건: 팀원 있고 모두 처리됨 (낙찰+유찰)
+  const allDone = players.length > 0 &&
+    players.every(p => p.soldTo !== null && p.soldTo !== -1 || toArr(data.skipped).includes(p.id));
+  const ended = !data.isReauction && allDone && data.currentIdx >= players.length;
+
+  document.getElementById('waitingScreen').style.display = waiting ? 'flex' : 'none';
+  document.getElementById('endBanner').style.display = (!waiting && ended) ? 'block' : 'none';
+  document.getElementById('playerCard').style.display = (!waiting && !ended) ? 'block' : 'none';
+  document.getElementById('queueCard').style.display = (!waiting) ? 'block' : 'none';
+  document.getElementById('capsPanel').style.display = (!waiting) ? 'flex' : 'none';
+
+  if (waiting) return;
+  renderCaps(captains, players);
+  renderQueue(data, active);
+  if (ended) return;
+
+  const player = active[data.currentIdx];
+
+  // 스테이지 라벨
+  document.getElementById('stageLabel').textContent = data.isReauction ? '🔁 재경매 진행 중' : '🏪 현재 경매 중';
+  document.getElementById('totN').textContent = players.length;
+  document.getElementById('doneN').textContent = soldCnt;
+
+  // 선수 정보
+  if (player) {
+    const isSold = player.soldTo !== null && player.soldTo !== -1;
+    const isSkip = toArr(data.skipped).includes(player.id);
+    document.getElementById('pEmoji').textContent = ROLE_EM[player.role]||'👤';
+    document.getElementById('pName').textContent = player.nick;
+
+    document.getElementById('pInfoBox').innerHTML = [
+      {lbl:'티어', val:`${TIER_EM[player.tier]||''} ${player.tier||'미입력'}`, cls:'gold'},
+      {lbl:'주 포지션', val:`${ROLE_EM[player.role]||''} ${player.role||'미입력'}`, cls:''},
+      {lbl:'증칼 패스레벨', val:player.pass||'미입력', cls:'green'},
+      {lbl:'챔프폭', val:player.champ||'미입력', cls:'blue'},
+    ].map(it => `<div class="info-item"><div class="info-lbl">${it.lbl}</div><div class="info-val ${it.cls}">${it.val}</div></div>`).join('');
+
+    document.getElementById('pAppeal').innerHTML = player.appeal
+      ? `<div class="info-appeal">💬 ${player.appeal}</div>` : '';
+
+    let statusHtml = '';
+    if (data.isReauction) statusHtml += '<span class="stag" style="border-color:var(--red);color:var(--red);">🔁 재경매</span>';
+    if (isSold) {
+      const cap = captains.find(c => c.id === player.soldTo);
+      statusHtml += `<span class="stag" style="border-color:var(--green);color:var(--green);">✅ ${cap?cap.name:'?'} 낙찰</span>`;
+    }
+    if (isSkip && !data.isReauction) statusHtml += '<span class="stag" style="border-color:var(--red);color:var(--red);">⏭ 유찰대기</span>';
+    document.getElementById('pStatus').innerHTML = statusHtml;
+  } else {
+    document.getElementById('pName').textContent = '경매 완료';
+    document.getElementById('pInfoBox').innerHTML = '';
+    document.getElementById('pAppeal').innerHTML = '';
+    document.getElementById('pStatus').innerHTML = '';
+  }
+
+  // 입찰 현황
+  const bid = data.currentBid || 0;
+  document.getElementById('bidNum').innerHTML = `${bid}<span>점</span>`;
+  const bidCapId = data.currentBidCapId;
+  const bidCap = captains.find(c => c.id === bidCapId);
+  document.getElementById('bidWho').innerHTML = bidCap
+    ? `최고 입찰자: <strong>${bidCap.name}</strong>`
+    : '입찰자 없음';
+
+  // 입찰 로그
+  const logs = toArr(data.bidLog);
+  document.getElementById('logList').innerHTML = [...logs].reverse().map((b,i) => `
+    <div class="log-row">
+      <span class="lo">${b.capId+1}</span>
+      <span class="ln">${b.capName}</span>
+      <span class="lp ${i===0?'hi':''}">${b.amount}점 ${i===0?'<span class="lbadge">최고가</span>':''}</span>
+    </div>`).join('');
+
+  renderCaps(captains, players);
+  renderQueue(data, active);
+}
+
+// ── 팀장 현황 ──
+function renderCaps(caps, players) {
+  document.getElementById('capList').innerHTML = caps.map(c => {
+    const members = toArr(c.members);
+    return `<div class="ac-row" onclick="showDetail(${c.id})">
+      <div class="ac-top">
+        <div class="ac-ord">${c.order}</div>
+        <div class="ac-name">${c.name}</div>
+        <div class="ac-pts ${c.points<80?'lo':''}">${c.points}점</div>
+      </div>
+      <div class="ac-slots">
+        <div class="slot ldr">👑</div>
+        ${Array.from({length:4},(_,i) => {
+          const m = members[i];
+          return m
+            ? `<div class="slot ok" title="${m.nick} (${m.price||0}점)">${m.nick.slice(0,7)}</div>`
+            : `<div class="slot">${i+1}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 경매 큐 ──
+function renderQueue(data, active) {
+  document.getElementById('totQ').textContent = active.length;
+  document.getElementById('doneQ').textContent = active.filter(p => p.soldTo !== null && p.soldTo !== -1).length;
+  document.getElementById('qList').innerHTML = active.map((p,i) => {
+    const cur = i === data.currentIdx;
+    const sold = p.soldTo !== null && p.soldTo !== -1;
+    const skip = !sold && toArr(data.skipped).includes(p.id);
+    return `<div class="qi ${cur?'cur':''} ${sold?'dn':''}">
+      <div class="qidx">${data.isReauction?'재경매':`#${p.id+1}`}</div>
+      <div class="qem">${ROLE_EM[p.role]||'👤'}</div>
+      <div class="qtier">${TIER_EM[p.tier]||''} ${p.tier||''}</div>
+      <div class="qn">${p.nick}${sold?'<br>✅':skip?'<br><span style="color:var(--red);font-size:8px;">유찰</span>':''}</div>
+    </div>`;
+  }).join('');
+  const cur = document.getElementById('qList').querySelector('.cur');
+  if (cur) cur.scrollIntoView({inline:'center',behavior:'smooth'});
+}
+
+// ── 팀 상세보기 ──
+function showDetail(capId) {
+  if (!state) return;
+  const c = state.captains.find(x => x.id === capId);
+  if (!c) return;
+  const members = toArr(c.members);
+  const spent = 400 - c.points;
+  document.getElementById('dmTitle').textContent = `👑 ${c.name} 팀`;
+  document.getElementById('dmPts').textContent = `${c.points}점`;
+  document.getElementById('dmPts').style.color = c.points < 80 ? 'var(--red)' : 'var(--gold)';
+  document.getElementById('dmMemCnt').textContent = `${members.length} / 4명`;
+  document.getElementById('dmSpent').textContent = `${spent}점`;
+  document.getElementById('dmMembers').innerHTML = [
+    `<div style="background:#17140a;border:1px solid var(--gold);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:18px;">👑</span>
+      <div><div style="font-size:14px;font-weight:800;color:var(--gold);">${c.name}</div><div style="font-size:10px;color:var(--muted);">팀장</div></div>
+    </div>`,
+    ...Array.from({length:4}, (_,i) => {
+      const m = members[i];
+      if (!m) return `<div style="background:var(--bg);border:1px dashed var(--border);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--muted);text-align:center;">빈 슬롯 ${i+1}</div>`;
+      const p = toArr(state.players).find(pl => pl.nick === m.nick);
+      return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div style="font-size:14px;font-weight:800;color:var(--white);">${m.nick}</div>
+          <div style="font-size:13px;font-weight:800;color:var(--green);">${m.price||0}점</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--gold);">${TIER_EM[p?.tier]||''} ${p?.tier||''}</span>
+          <span style="font-size:11px;color:var(--sub);">${ROLE_EM[p?.role]||''} ${p?.role||''}</span>
+          ${p?.champ?`<span style="font-size:11px;color:var(--blue);">🎮 ${p.champ}</span>`:''}
+        </div>
+        ${p?.appeal?`<div style="font-size:11px;color:var(--muted);margin-top:4px;font-style:italic;">💬 ${p.appeal}</div>`:''}
+      </div>`;
+    })
+  ].join('');
+  document.getElementById('detailModal').classList.add('show');
+}
+
+// ── 카운트다운 ──
+function startCd(sec) {
+  stopCd();
+  cdSec = Math.max(0, Math.min(10, Math.round(sec)));
+  document.getElementById('cdWrap').classList.add('active');
+  updateCdUI();
+  if (cdSec <= 0) { stopCd(); return; }
+  cdTimer = setInterval(() => {
+    cdSec = Math.max(0, cdSec - 1);
+    updateCdUI();
+    if (cdSec <= 0) stopCd();
+  }, 1000);
+}
+function stopCd() {
+  clearInterval(cdTimer); cdTimer = null;
+  const wrap = document.getElementById('cdWrap');
+  if (wrap) wrap.classList.remove('active');
+  cdSec = 0; updateCdUI();
+}
+function updateCdUI() {
+  const bar = document.getElementById('cdBar');
+  const num = document.getElementById('cdNum');
+  if (!bar || !num) return;
+  bar.style.width = (cdSec / 10 * 100) + '%';
+  num.textContent = cdSec || '-';
+  const urgent = cdSec <= 3 && cdSec > 0;
+  bar.className = 'cd-bar' + (urgent ? ' urgent' : '');
+  num.className = 'cd-num' + (urgent ? ' urgent' : '');
+  num.style.color = urgent ? 'var(--red)' : 'var(--green)';
+}
+
+// ── 낙찰/유찰 플래시 ──
+function showFlash(d) {
+  if (spectatorJustJoined) return; // 입장 직후 억제
+  const isSold = d.type === 'sold';
+  const box = document.getElementById('flashBox');
+  box.className = `flash-box ${isSold ? 'sold' : 'skip'}`;
+  document.getElementById('fEm').textContent = isSold ? '🏆' : '⏭';
+  document.getElementById('fTit').textContent = isSold ? `${d.playerNick} 낙찰!` : `${d.playerNick} 유찰`;
+  document.getElementById('fSub').textContent = isSold ? `${d.capName} — ${d.price}점` : '재경매 예정';
+  const el = document.getElementById('flash');
+  el.style.display = 'flex';
+  setTimeout(() => el.style.display = 'none', 950);
+}
+
+// ── 실시간 채팅 ──
+let chatOpen = false;
+let chatUnreadCount = 0;
+let chatMyName = '관전자';
+let chatInited = false;
+let chatCurrentTab = 'chat';
+let chatUsers = {};
+
+function initChat(myName) {
+  chatMyName = myName;
+  if (chatInited) return;
+  chatInited = true;
+  const chatRef = db.ref('chat/' + spectatorRoomCode);
+  const presenceRef = db.ref('chatPresence/' + spectatorRoomCode);
+  window._chatRef = chatRef;
+  window._presenceRef = presenceRef;
+
+  const myKey = myName.replace(/[.#$/[\]]/g, '_');
+  presenceRef.child(myKey).set({ name: myName, role: 'user', joinedAt: Date.now() });
+  presenceRef.child(myKey).onDisconnect().remove();
+
+  presenceRef.on('value', snap => {
+    chatUsers = {};
+    snap.forEach(child => { chatUsers[child.val().name] = child.val(); });
+    renderUserList();
+    const cnt = Object.keys(chatUsers).length;
+    const el = document.getElementById('userCount');
+    if (el) el.textContent = cnt;
+  });
+
+  chatRef.limitToLast(80).on('child_added', snap => {
+    const m = snap.val();
+    if (!m) return;
+    appendChatMsg(m);
+    if (!chatOpen || chatCurrentTab !== 'chat') {
+      chatUnreadCount++;
+      const badge = document.getElementById('chatUnread');
+      if (badge) { badge.style.display = 'flex'; badge.textContent = chatUnreadCount > 9 ? '9+' : chatUnreadCount; }
+    }
+  });
+}
+
+function renderUserList() {
+  const list = document.getElementById('userList');
+  if (!list) return;
+  const now = Date.now();
+  list.innerHTML = Object.values(chatUsers).map(u => {
+    const isBanned = u.bannedUntil && u.bannedUntil > now;
+    const isHost = u.role === 'host';
+    const remaining = isBanned ? Math.ceil((u.bannedUntil - now) / 60000) : 0;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border:1px solid ${isBanned?'var(--red)':isHost?'var(--gold)':'var(--border)'};border-radius:8px;">
+      <span style="font-size:13px;font-weight:700;color:${isHost?'var(--gold)':'var(--white)'};">${isHost?'👑 ':''}${escChat(u.name)}</span>
+      ${isBanned?`<span style="font-size:10px;color:var(--red);">🚫 ${remaining}분 남음</span>`:''}
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">참여자가 없습니다</div>';
+}
+
+function switchChatTab(tab) {
+  chatCurrentTab = tab;
+  const chatContent = document.getElementById('chatTabContent');
+  const usersContent = document.getElementById('usersTabContent');
+  const chatTabBtn = document.getElementById('chatTab');
+  const usersTabBtn = document.getElementById('usersTab');
+  if (tab === 'chat') {
+    chatContent.style.display = 'flex'; usersContent.style.display = 'none';
+    chatTabBtn.style.cssText = 'background:linear-gradient(135deg,var(--blue),#3a6fd0);color:#fff;border:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px 0 0 6px;cursor:pointer;';
+    usersTabBtn.style.cssText = 'background:var(--bg3);color:var(--sub);border:1px solid var(--border);border-left:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:0 6px 6px 0;cursor:pointer;';
+    chatContent.scrollTop = chatContent.scrollHeight;
+  } else {
+    chatContent.style.display = 'none'; usersContent.style.display = 'block';
+    usersTabBtn.style.cssText = 'background:linear-gradient(135deg,var(--blue),#3a6fd0);color:#fff;border:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:0 6px 6px 0;cursor:pointer;';
+    chatTabBtn.style.cssText = 'background:var(--bg3);color:var(--sub);border:1px solid var(--border);border-right:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px 0 0 6px;cursor:pointer;';
+    renderUserList();
+  }
+}
+
+function appendChatMsg(m) {
+  const box = document.getElementById('chatTabContent');
+  if (!box) return;
+  const isMe = m.name === chatMyName;
+  const isHost = m.role === 'host';
+  const isSystem = m.role === 'system';
+  if (isSystem) {
+    const el = document.createElement('div');
+    el.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:4px 0;';
+    el.textContent = m.text;
+    const placeholder = box.querySelector('.chat-placeholder');
+    if (placeholder) placeholder.remove();
+    box.appendChild(el); box.scrollTop = box.scrollHeight; return;
+  }
+  const nameColor = isHost ? '#f0a040' : isMe ? 'var(--green)' : 'var(--blue)';
+  const el = document.createElement('div');
+  el.style.cssText = `display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};gap:2px;`;
+  el.innerHTML = `<div style="font-size:10px;color:${nameColor};font-weight:700;">${isHost?'👑 ':''}${escChat(m.name)}</div><div style="max-width:480px;padding:7px 11px;border-radius:${isMe?'12px 4px 12px 12px':'4px 12px 12px 12px'};background:${isMe?'linear-gradient(135deg,#1a2a50,#2a3a70)':'var(--bg3)'};border:1px solid ${isMe?'var(--blue)':'var(--border)'};font-size:13px;line-height:1.4;word-break:break-word;">${escChat(m.text)}</div><div style="font-size:9px;color:var(--muted);">${m.time||''}</div>`;
+  const placeholder = box.querySelector('.chat-placeholder');
+  if (placeholder) placeholder.remove();
+  box.appendChild(el); box.scrollTop = box.scrollHeight;
+}
+function escChat(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function sendChat() {
+  const inp = document.getElementById('chatInput');
+  const text = (inp.value||'').trim();
+  if (!text) return;
+  const me = chatUsers[chatMyName];
+  if (me && me.bannedUntil && me.bannedUntil > Date.now()) {
+    const rem = Math.ceil((me.bannedUntil - Date.now()) / 60000);
+    showToast(`🚫 채팅 금지 중입니다 (${rem}분 남음)`, 'red');
+    inp.value = ''; return;
+  }
+  inp.value = '';
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  (window._chatRef || db.ref('chat/' + spectatorRoomCode)).push({ name: chatMyName, role: 'user', text, time, ts: Date.now() });
+}
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chatPanel');
+  panel.style.display = chatOpen ? 'flex' : 'none';
+  if (chatOpen) {
+    chatUnreadCount = 0;
+    const badge = document.getElementById('chatUnread');
+    if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+    const box = document.getElementById('chatTabContent');
+    if (box) box.scrollTop = box.scrollHeight;
+    setTimeout(() => document.getElementById('chatInput')?.focus(), 100);
+  }
+}
+</script>
+
+<!-- 플로팅 채팅 -->
+<div id="chatBtn" onclick="toggleChat()" title="채팅" style="position:fixed;bottom:24px;right:24px;z-index:500;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#1a2a50,#252d60);border:2px solid var(--blue);box-shadow:0 4px 20px rgba(79,142,240,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;transition:transform .15s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">💬</div>
+<div id="chatUnread" style="display:none;position:fixed;bottom:62px;right:18px;z-index:501;background:var(--red);color:#fff;font-size:10px;font-weight:800;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;"></div>
+<div id="chatPanel" style="display:none;position:fixed;bottom:90px;right:24px;z-index:499;width:640px;height:720px;background:var(--bg2);border:1px solid var(--blue);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.5);flex-direction:column;overflow:hidden;">
+  <div style="padding:10px 16px;background:linear-gradient(135deg,#0d1a30,#1a2540);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;gap:0;">
+      <button id="chatTab" onclick="switchChatTab('chat')" style="background:linear-gradient(135deg,var(--blue),#3a6fd0);color:#fff;border:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px 0 0 6px;cursor:pointer;">💬 채팅</button>
+      <button id="usersTab" onclick="switchChatTab('users')" style="background:var(--bg3);color:var(--sub);border:1px solid var(--border);border-left:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:0 6px 6px 0;cursor:pointer;">👥 참여자 <span id="userCount" style="background:var(--blue);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:3px;">0</span></button>
+    </div>
+    <button onclick="toggleChat()" style="background:none;border:none;color:var(--sub);font-size:20px;cursor:pointer;line-height:1;">×</button>
+  </div>
+  <div id="chatTabContent" style="flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+    <div class="chat-placeholder" style="text-align:center;font-size:11px;color:var(--muted);padding:8px 0;">채팅을 시작해보세요!</div>
+  </div>
+  <div id="usersTabContent" style="display:none;flex:1;overflow-y:auto;padding:12px;">
+    <div id="userList" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+  <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;">
+    <input id="chatInput" placeholder="메시지 입력..." maxlength="100"
+      style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;border-radius:8px;outline:none;"
+      onkeydown="if(event.key==='Enter')sendChat()"
+      onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+    <button onclick="sendChat()" style="background:linear-gradient(135deg,#1a2a50,#2a3a70);border:1px solid var(--blue);color:var(--blue);font-size:13px;font-weight:700;padding:8px 14px;border-radius:8px;cursor:pointer;">전송</button>
+  </div>
+</div>
+</body>
+</html>

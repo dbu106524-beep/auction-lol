@@ -1,0 +1,2022 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>강세원배 — 진행자 대시보드</title>
+
+<!-- ✅ Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+:root {
+  --bg:#07090f; --bg2:#0d1120; --bg3:#131828;
+  --gold:#c89b3c; --gold2:#f0c060;
+  --white:#ffffff; --sub:#8090b0; --muted:#4a5578;
+  --green:#3ecf7a; --red:#ef4444; --blue:#4f8ef0;
+  --border:#1a2040;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--white);min-height:100vh;}
+body::before{content:'';position:fixed;top:-200px;left:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(200,155,60,.06) 0%,transparent 70%);pointer-events:none;z-index:0;}
+
+/* 헤더 */
+.header{position:relative;z-index:10;background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;}
+.header-left{display:flex;align-items:center;gap:12px;}
+.badge{background:linear-gradient(90deg,var(--gold),var(--gold2));color:#07090f;font-size:9px;font-weight:700;letter-spacing:2px;padding:4px 10px;border-radius:20px;}
+.htitle{font-family:'Black Han Sans',sans-serif;font-size:18px;}
+.htitle span{color:var(--gold);}
+.hlabel{font-size:11px;color:var(--red);font-weight:700;letter-spacing:1px;}
+.status-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub);}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* 레이아웃 */
+.layout{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;padding:14px;max-width:1560px;margin:0 auto;}
+
+/* 스테이지 */
+.stage{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.stage-head{background:linear-gradient(135deg,#17140a,#1e1a10);border-bottom:1px solid #2a2010;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+.stage-label{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:3px;}
+.stage-prog{font-size:12px;color:var(--sub);}
+.stage-prog strong{color:var(--gold);}
+
+.player-row{padding:22px 28px;display:flex;gap:24px;align-items:flex-start;}
+.avatar{width:80px;height:80px;border-radius:14px;background:linear-gradient(135deg,#1a2040,#252d50);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:38px;flex-shrink:0;box-shadow:0 0 24px rgba(200,155,60,.2);}
+.pinfo{flex:1;}
+.pname{font-family:'Black Han Sans',sans-serif;font-size:32px;line-height:1;margin-bottom:8px;}
+.tags{display:flex;gap:6px;flex-wrap:wrap;}
+.tag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--bg3);border:1px solid var(--border);color:var(--sub);}
+.tag.t{border-color:var(--gold);color:var(--gold);background:#17140a;}
+.tag.r{border-color:var(--blue);color:var(--blue);background:#0d1428;}
+.tag.p{border-color:var(--green);color:var(--green);background:#0a1a10;}
+.tag.re{border-color:var(--red);color:var(--red);background:#1a0808;}
+
+.bid-box{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 18px;min-width:180px;}
+.bid-lbl{font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:4px;}
+.bid-num{font-family:'Black Han Sans',sans-serif;font-size:44px;color:var(--gold);line-height:1;}
+.bid-num span{font-size:16px;}
+.bid-who{font-size:11px;color:var(--sub);margin-top:4px;}
+.bid-who strong{color:var(--white);}
+
+/* 입찰 로그 */
+.log-wrap{margin:0 28px 18px;background:var(--bg);border:1px solid var(--border);border-radius:10px;max-height:100px;overflow-y:auto;}
+.log-head{padding:7px 12px;border-bottom:1px solid var(--border);font-size:10px;color:var(--muted);letter-spacing:1px;font-weight:700;}
+.log-row{padding:6px 12px;display:flex;gap:8px;align-items:center;border-bottom:1px solid #0d1020;font-size:11px;animation:fi .2s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+.log-row:last-child{border-bottom:none;}
+.lo{color:var(--muted);width:18px;font-size:10px;}
+.ln{color:var(--gold);font-weight:700;width:80px;}
+.lp{color:var(--white);font-weight:700;margin-left:auto;}
+.lp.hi{color:var(--gold);}
+.lbadge{font-size:9px;padding:1px 6px;border-radius:8px;background:#17140a;color:var(--gold);border:1px solid var(--gold);}
+
+/* 컨트롤 */
+.controls{padding:0 28px 20px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.ig{display:flex;flex-direction:column;gap:5px;}
+.il{font-size:10px;color:var(--sub);}
+.isel{background:var(--bg3);border:1px solid var(--border);color:var(--white);font-size:12px;padding:9px 12px;border-radius:8px;outline:none;cursor:pointer;min-width:150px;}
+.isel:focus{border-color:var(--gold);}
+.inum{background:var(--bg3);border:1px solid var(--border);color:var(--white);font-size:15px;font-weight:700;padding:9px 14px;border-radius:8px;outline:none;width:110px;text-align:center;}
+.inum:focus{border-color:var(--gold);}
+.btn{padding:9px 18px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.b-bid{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#07090f;}
+.b-bid:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(200,155,60,.4);}
+.b-sold{background:linear-gradient(135deg,#1a4a20,#1e5a25);color:var(--green);border:1px solid var(--green);}
+.b-sold:hover{background:var(--green);color:#07090f;}
+.b-skip{background:var(--bg3);color:var(--sub);border:1px solid var(--border);}
+.b-skip:hover{border-color:var(--sub);color:var(--white);}
+.b-undo{background:linear-gradient(135deg,#1a1428,#201830);color:#a070e0;border:1px solid #6040b0;}
+.b-undo:hover{background:#a070e0;color:var(--white);}
+
+/* 패널 */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;max-height:calc(100vh - 90px);display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.22);}
+.ph{padding:14px 16px;border-bottom:1px solid var(--border);font-size:10px;font-weight:700;color:var(--gold);letter-spacing:2px;}
+.plist{overflow-y:auto;flex:1;}
+.ccard{padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.ccard:hover{background:var(--bg3);}
+.ccard.full{opacity:.45;}
+.ctop{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.cord{width:20px;height:20px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);font-size:9px;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cname{font-size:14px;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cpts{font-size:13px;font-weight:800;color:var(--gold);}
+.cpts.lo{color:var(--red);}
+.cpts.ze{color:var(--muted);}
+.slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-left:27px;}
+.slot{min-height:42px;border-radius:10px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);transition:all .2s;padding:6px 8px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.slot.ok{background:#0d1a28;border-color:var(--blue);color:#b9d7ff;font-size:13px;font-weight:800;}
+.slot.ldr{background:#17140a;border-color:var(--gold);color:var(--gold);font-size:16px;}
+
+/* 큐 */
+.queue{background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;grid-column:1;}
+.qh{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.qt{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:2px;}
+.qlist{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));padding:12px 14px;gap:8px;align-items:stretch;}
+.qi{min-width:0;padding:10px 6px;text-align:center;border-radius:10px;border:1px solid transparent;cursor:pointer;transition:all .15s;background:rgba(19,24,40,.45);}
+.qi:hover{background:var(--bg3);border-color:var(--border);}
+.qi.cur{background:#17140a;border-color:var(--gold);}
+.qi.dn{opacity:.3;}
+.qi.dn .qn{text-decoration:line-through;}
+.qidx{font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:700;}
+.qem{font-size:20px;margin-bottom:2px;}
+.qtier{font-size:9px;color:var(--gold);font-weight:700;margin-bottom:3px;letter-spacing:0.3px;}
+.qn{font-size:11px;color:var(--sub);line-height:1.35;word-break:break-word;}
+.qi.cur .qn{color:var(--gold);font-weight:700;}
+
+/* 팀원 추가 모달 */
+.overlay{position:fixed;inset:0;z-index:100;background:rgba(7,9,15,.88);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px;width:520px;animation:mi .2s ease;}
+@keyframes mi{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:none;}}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:18px;color:var(--gold);}
+.fg{display:flex;flex-direction:column;gap:5px;flex:1;}
+.flbl{font-size:10px;color:var(--sub);}
+.finp{background:var(--bg3);border:1px solid var(--border);color:var(--white);font-size:13px;padding:9px 12px;border-radius:8px;outline:none;}
+.finp:focus{border-color:var(--gold);}
+.frow{display:flex;gap:10px;}
+.mact{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;}
+
+/* 낙찰 플래시 */
+.flash{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.flash-box{background:linear-gradient(135deg,#17140a,#231a0a);border:2px solid var(--gold);border-radius:22px;padding:36px 56px;text-align:center;animation:fa .85s ease forwards;}
+@keyframes fa{0%{opacity:0;transform:scale(.8);}20%{opacity:1;transform:scale(1.04);}70%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(.95);}}
+.fem{font-size:44px;margin-bottom:10px;}
+.ftit{font-family:'Black Han Sans',sans-serif;font-size:30px;color:var(--gold);margin-bottom:4px;}
+.fsub{font-size:14px;color:var(--sub);}
+
+/* 셋업 */
+.setup{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;padding:32px;overflow-y:auto;}
+.stitle{font-family:'Black Han Sans',sans-serif;font-size:28px;text-align:center;}
+.stitle span{color:var(--gold);}
+.sbox{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;width:100%;max-width:860px;}
+.sbox h3{font-size:12px;color:var(--gold);margin-bottom:14px;letter-spacing:1px;}
+.cap-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;}
+.cap-in{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:9px 7px;text-align:center;}
+.cap-in input{background:transparent;border:none;outline:none;color:var(--white);font-size:11px;font-weight:700;text-align:center;width:100%;}
+.cap-in input::placeholder{color:var(--muted);}
+.ord{font-size:8px;color:var(--muted);margin-bottom:3px;}
+.snote{font-size:11px;color:var(--sub);margin-top:8px;line-height:1.7;}
+.sstart{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#07090f;font-size:15px;font-weight:700;padding:13px 44px;border-radius:10px;border:none;cursor:pointer;transition:all .2s;}
+.sstart:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,155,60,.4);}
+/* 카운트다운 */
+.info-item{display:flex;flex-direction:column;gap:2px;}
+.info-lbl{font-size:10px;color:var(--muted);letter-spacing:1px;font-weight:700;}
+.info-val{font-size:13px;color:var(--white);font-weight:700;}
+.info-val.gold{color:var(--gold);}
+.info-val.blue{color:var(--blue);}
+.info-val.green{color:var(--green);}
+.info-appeal{margin-top:8px;padding:8px 12px;background:rgba(200,155,60,.07);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;font-size:13px;color:var(--gold2);font-style:italic;}
+.countdown-wrap.active{display:block;}
+.countdown-bar-bg{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:6px;}
+.countdown-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--gold));border-radius:4px;transition:width .9s linear,background .3s;}
+.countdown-bar.urgent{background:linear-gradient(90deg,var(--red),#ff6600);}
+.countdown-label{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--sub);}
+.countdown-num{font-family:'Black Han Sans',sans-serif;font-size:22px;color:var(--green);}
+.countdown-num.urgent{color:var(--red);animation:blink2 .5s infinite;}
+@keyframes blink2{0%,100%{opacity:1;}50%{opacity:.4;}}
+/* 경매 시작 버튼 */
+.btn-start-auction{background:linear-gradient(135deg,#1a3a1a,#2a5a2a);color:var(--green);border:2px solid var(--green);font-size:13px;padding:10px 22px;border-radius:10px;cursor:pointer;font-weight:700;transition:all .2s;animation:glow 2s infinite;}
+.btn-start-auction:hover{background:var(--green);color:#07090f;transform:translateY(-1px);}
+@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(62,207,122,.3);}50%{box-shadow:0 0 20px rgba(62,207,122,.7);}}
+@media (max-width: 1440px){.qlist{grid-template-columns:repeat(5,minmax(0,1fr));}.layout{grid-template-columns:1fr;}.panel{max-height:none;}}
+@media (max-width: 900px){.qlist{grid-template-columns:repeat(4,minmax(0,1fr));}.slots{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media (max-width: 640px){.qlist{grid-template-columns:repeat(3,minmax(0,1fr));}}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- 셋업 -->
+<div class="setup" id="setup">
+  <div class="stitle">강세원배 <span>경매 진행자</span> 대시보드</div>
+  <div class="sbox" style="max-width:460px;">
+    <h3>🔑 방 코드 설정</h3>
+    <p class="snote" style="margin-bottom:12px;">팀장들이 이 코드 + 본인 닉네임을 입력해 입장합니다.</p>
+    <input id="roomCodeInput" placeholder="방 코드 입력 (예: KSW2025)" maxlength="12"
+      style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--white);font-size:22px;font-weight:800;padding:13px 16px;border-radius:8px;outline:none;text-transform:uppercase;letter-spacing:4px;text-align:center;"
+      oninput="this.value=this.value.toUpperCase()"
+      onkeydown="if(event.key==='Enter')document.getElementById('maxCapInput').focus()">
+  </div>
+  <div class="sbox" style="max-width:460px;">
+    <h3>👑 팀장 수 설정</h3>
+    <p class="snote" style="margin-bottom:12px;">참여할 팀장 수를 설정하세요. 설정한 수만큼만 입장 가능합니다.</p>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button onclick="adjustCap(-1)"
+        style="width:44px;height:44px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--white);font-size:22px;font-weight:700;cursor:pointer;flex-shrink:0;">−</button>
+      <input id="maxCapInput" type="number" min="2" max="20" value="10"
+        style="flex:1;background:var(--bg3);border:1px solid var(--gold);color:var(--gold);font-size:32px;font-weight:800;padding:10px;border-radius:8px;outline:none;text-align:center;"
+        onkeydown="if(event.key==='Enter')document.querySelector('.sstart').click()">
+      <button onclick="adjustCap(1)"
+        style="width:44px;height:44px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--white);font-size:22px;font-weight:700;cursor:pointer;flex-shrink:0;">+</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">최소 2명 · 최대 20명</div>
+  </div>
+  <div class="sbox" style="max-width:460px;">
+    <h3>💡 팀원은 경매 중 실시간으로 추가합니다</h3>
+    <p class="snote">
+      경매 시작 후 각 선수가 나올 때마다 팀원 일괄 추가 버튼으로 입력하세요.<br>
+      팀장들은 방 코드 + 본인 닉네임으로 직접 입장합니다.
+    </p>
+  </div>
+  <button class="sstart" onclick="startApp()">🏪 경매 시작</button>
+</div>
+
+<!-- 메인 앱 -->
+<div id="app" style="display:none;">
+  <div class="header">
+    <div class="header-left">
+      <div class="badge">HOST</div>
+      <div class="htitle">강세원배 <span>증강 옥션 칼바람</span></div>
+      <div class="hlabel">🎬 진행자 전용</div>
+    </div>
+    <div class="status-row">
+      <div class="dot"></div>
+      <span id="hStatus">Firebase 연결 중...</span>
+      <span style="color:var(--muted);">|</span>
+      <span id="hProg" style="color:var(--gold);"></span>
+      <span style="color:var(--muted);">|</span>
+      <button class="btn" style="background:linear-gradient(135deg,#17140a,#231a0a);color:var(--gold);border:1px solid var(--gold);font-size:10px;padding:5px 12px;" onclick="toggleRoomCode()" id="toggleCodeBtn">🔑 코드 보기</button>
+      <button class="btn" style="background:linear-gradient(135deg,#2a0a0a,#3a1010);color:var(--red);border:1px solid var(--red);font-size:10px;padding:5px 12px;" onclick="resetAll()">🔄 전체 초기화</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- 스테이지 -->
+    <div>
+      <div class="stage" style="margin-bottom:14px;">
+        <div class="stage-head">
+          <div class="stage-label" id="stageLabel">🏪 현재 경매 중</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn" style="background:linear-gradient(135deg,#0a1a28,#102030);color:#60b0f0;border:1px solid #3a7090;font-size:11px;padding:6px 14px;" onclick="openBulkAdd()">📋 팀원 일괄 추가</button>
+            <button class="btn" style="background:linear-gradient(135deg,#0a1a10,#102a18);color:var(--green);border:1px solid #3a6a30;font-size:11px;padding:6px 14px;" onclick="openPointsModal()">💰 포인트 지급/회수</button>
+            <div class="stage-prog">완료 <strong id="doneN">0</strong> / <span id="totN">0</span></div>
+          </div>
+        </div>
+
+        <div class="player-row">
+          <div class="avatar" id="pEmoji">?</div>
+          <div class="pinfo">
+            <div class="pname" id="pName">팀원을 추가해주세요</div>
+            <div id="pInfoBox" style="margin-top:10px;display:grid;grid-template-columns:repeat(3,auto);gap:6px 16px;align-items:start;"></div>
+            <div class="tags" id="pTags" style="margin-top:6px;"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
+            <div class="bid-box">
+              <div class="bid-lbl">현재 최고 입찰가</div>
+              <div class="bid-num" id="bidNum">0<span>점</span></div>
+              <div class="bid-who" id="bidWho">입찰자 없음</div>
+            </div>
+            <button class="btn-start-auction" id="startAuctionBtn" onclick="startAuctionForPlayer()" style="display:none;">
+              🔔 경매 시작
+            </button>
+          </div>
+        </div>
+
+        <!-- 카운트다운 -->
+        <div class="countdown-wrap" id="countdownWrap">
+          <div class="countdown-bar-bg">
+            <div class="countdown-bar" id="countdownBar" style="width:100%;"></div>
+          </div>
+          <div class="countdown-label">
+            <span>낙찰/유찰까지</span>
+            <span class="countdown-num" id="countdownNum">10</span>
+          </div>
+        </div>
+
+        <div class="log-wrap">
+          <div class="log-head">📋 입찰 내역</div>
+          <div id="logList"></div>
+        </div>
+
+        <div class="controls">
+          <div class="ig">
+            <div class="il">입찰 팀장</div>
+            <select class="isel" id="capSel"></select>
+          </div>
+          <div class="ig">
+            <div class="il">입찰 포인트</div>
+            <input type="number" class="inum" id="bidAmt" placeholder="0" min="1">
+          </div>
+          <button class="btn b-bid" onclick="placeBid()">✋ 입찰</button>
+          <button class="btn b-sold" onclick="confirmSold()">🏆 낙찰 확정</button>
+          <button class="btn b-skip" onclick="skipPlayer()">⏭ 유찰</button>
+          <button class="btn b-undo" onclick="undoBid()">↩ 취소</button>
+          <button class="btn" style="background:linear-gradient(135deg,#2a1a0a,#3a2510);color:#f0a040;border:1px solid #c07020;font-size:11px;padding:9px 14px;" onclick="rollbackSold()">🔄 낙찰 취소</button>
+          <button class="btn" style="background:linear-gradient(135deg,#1a0a2a,#251040);color:#c070f0;border:1px solid #8040c0;font-size:11px;padding:9px 14px;" onclick="openAssign()">🎯 유찰 배정</button>
+          <button class="btn" style="background:linear-gradient(135deg,#0a1a10,#102a18);color:var(--green);border:1px solid #3a8040;font-size:11px;padding:9px 14px;" onclick="downloadBidLog()">📥 로그 CSV</button>
+        </div>
+      </div>
+
+      <!-- 대기열 -->
+      <div class="queue">
+        <div class="qh">
+          <div class="qt">📋 경매 순서</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="font-size:11px;color:var(--sub);">완료 <strong id="doneQ" style="color:var(--gold);">0</strong> / <span id="totQ">0</span></div>
+            <div style="font-size:10px;color:var(--muted);">드래그로 순서 변경</div>
+            <button onclick="shuffleQueue()" style="background:linear-gradient(135deg,#1a0a2a,#251040);color:#c070f0;border:1px solid #8040c0;font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer;">🔀 랜덤 셔플</button>
+          </div>
+        </div>
+        <div class="qlist" id="qList"></div>
+      </div>
+    </div>
+
+    <!-- 팀장 패널 -->
+    <div class="panel">
+      <div class="ph">👑 팀장 현황</div>
+      <div class="plist" id="capList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 팀원 수정 모달 -->
+<div class="overlay" id="editModal" style="display:none;">
+  <div class="modal" style="width:500px;">
+    <h2>✏️ 팀원 정보 수정</h2>
+    <input type="hidden" id="edit_id">
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="fg"><div class="flbl">닉네임 *</div><input class="finp" id="edit_nick" placeholder="닉네임 입력"></div>
+      <div class="frow">
+        <div class="fg"><div class="flbl">최고 솔랭 티어</div>
+          <input class="finp" id="edit_tier" placeholder="예: 에메랄드" list="tierListEdit">
+          <datalist id="tierListEdit">
+            <option value="언랭"><option value="아이언"><option value="브론즈"><option value="실버">
+            <option value="골드"><option value="플래티넘"><option value="에메랄드">
+            <option value="다이아몬드"><option value="마스터"><option value="그랜드마스터"><option value="챌린저">
+          </datalist>
+        </div>
+        <div class="fg"><div class="flbl">주 역할</div>
+          <select class="finp" id="edit_role">
+            <option value="">선택</option>
+            <option value="딜러">⚔️ 딜러</option>
+            <option value="탱커">🛡️ 탱커</option>
+            <option value="서포터">💊 서포터</option>
+          </select>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fg"><div class="flbl">증칼 패스 레벨</div><input class="finp" id="edit_pass" placeholder="숫자만 입력 (예: 45)"></div>
+        <div class="fg"><div class="flbl">챔프폭 레벨</div><input class="finp" id="edit_champ" placeholder="예: 넓음"></div>
+      </div>
+      <div class="fg"><div class="flbl">한줄 어필</div><input class="finp" id="edit_appeal" placeholder="예: 팀운 좋습니다!"></div>
+    </div>
+    <div class="mact" style="justify-content:space-between;">
+      <button class="btn b-skip" onclick="deletePlayer()" style="background:linear-gradient(135deg,#2a0a0a,#3a1010);color:var(--red);border:1px solid var(--red);">🗑 삭제</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn b-skip" onclick="closeEditPlayer()">취소</button>
+        <button class="btn b-bid" onclick="saveEditPlayer()">✅ 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- 포인트 지급/회수 모달 -->
+<div class="overlay" id="pointsModal" style="display:none;">
+  <div class="modal" style="width:480px;">
+    <h2>💰 포인트 지급 / 회수</h2>
+    <p style="font-size:11px;color:var(--sub);margin-bottom:16px;">특정 팀장에게 포인트를 지급하거나 회수합니다.</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="fg">
+        <div class="flbl">대상 팀장</div>
+        <select class="finp" id="pts_cap"></select>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="setPtsSign(1)" id="pts_btn_give"
+          style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--green);background:rgba(62,207,122,.15);color:var(--green);font-size:13px;font-weight:800;cursor:pointer;">
+          ➕ 지급
+        </button>
+        <button onclick="setPtsSign(-1)" id="pts_btn_take"
+          style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--sub);font-size:13px;font-weight:800;cursor:pointer;">
+          ➖ 회수
+        </button>
+      </div>
+      <div class="fg">
+        <div class="flbl">포인트 수량</div>
+        <input type="number" class="finp" id="pts_amount" placeholder="0" min="1"
+          style="font-size:22px;font-weight:800;text-align:center;" oninput="previewPointsChange()">
+      </div>
+      <div class="fg">
+        <div class="flbl">사유 (선택)</div>
+        <input class="finp" id="pts_reason" placeholder="예: 벌칙, 보너스 등">
+      </div>
+    </div>
+    <div id="pointsPreview" style="margin-top:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;display:none;">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px;">변경 미리보기</div>
+      <div id="pointsPreviewList" style="display:flex;flex-direction:column;gap:5px;max-height:160px;overflow-y:auto;"></div>
+    </div>
+    <div class="mact">
+      <button class="btn b-skip" onclick="document.getElementById('pointsModal').style.display='none'">취소</button>
+      <button class="btn b-bid" onclick="applyPointsChange()">✅ 적용</button>
+    </div>
+  </div>
+</div>
+
+<!-- 10명 일괄 추가 모달 -->
+<div class="overlay" id="bulkModal" style="display:none;">
+  <div class="modal" style="width:620px;max-width:96vw;max-height:92vh;overflow-y:auto;">
+    <h2>📋 팀원 일괄 추가</h2>
+
+    <!-- 탭 -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border);">
+      <button id="tabManual" onclick="switchBulkTab('manual')"
+        style="padding:8px 20px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#07090f;font-size:12px;font-weight:700;border:none;border-radius:8px 8px 0 0;cursor:pointer;margin-right:4px;">
+        ✏️ 직접 입력
+      </button>
+      <button id="tabExcel" onclick="switchBulkTab('excel')"
+        style="padding:8px 20px;background:var(--bg3);color:var(--sub);font-size:12px;font-weight:700;border:none;border-radius:8px 8px 0 0;cursor:pointer;border:1px solid var(--border);border-bottom:none;">
+        📊 엑셀/CSV 업로드
+      </button>
+    </div>
+
+    <!-- 직접 입력 탭 — 세로 레이아웃 -->
+    <div id="panelManual">
+      <p style="font-size:11px;color:var(--sub);margin-bottom:12px;">닉네임 * 필수 / 나머지 선택. 한 명씩 세로로 입력하세요.</p>
+      <!-- 헤더 행 -->
+      <div style="display:grid;grid-template-columns:28px 1fr 90px 80px 60px 80px 1fr;gap:6px;margin-bottom:6px;padding:0 2px;">
+        <div style="font-size:9px;color:var(--gold);font-weight:700;text-align:center;">#</div>
+        <div style="font-size:9px;color:var(--gold);font-weight:700;">닉네임 *</div>
+        <div style="font-size:9px;color:var(--gold);font-weight:700;">티어</div>
+        <div style="font-size:9px;color:var(--gold);font-weight:700;">역할</div>
+        <div style="font-size:9px;color:var(--gold);font-weight:700;">패스</div>
+        <div style="font-size:9px;color:var(--gold);font-weight:700;">챔프폭</div>
+        <div style="font-size:9px;color:var(--gold);font-weight:700;">한줄 어필</div>
+      </div>
+      <div id="bulkGrid" style="display:flex;flex-direction:column;gap:5px;"></div>
+    </div>
+
+    <!-- 엑셀/CSV 업로드 탭 -->
+    <div id="panelExcel" style="display:none;">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:3px;">📥 양식 다운로드</div>
+          <div style="font-size:11px;color:var(--sub);">닉네임 / 티어 / 역할 / 패스레벨 / 챔프폭레벨 / 한줄어필</div>
+        </div>
+        <button onclick="downloadTemplate()"
+          style="background:linear-gradient(135deg,#0d3a28,#1a5a3a);color:var(--green);border:1px solid var(--green);font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;cursor:pointer;">
+          📥 CSV 양식 다운로드
+        </button>
+      </div>
+      <div id="dropZone"
+        style="border:2px dashed var(--border);border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:12px;"
+        onclick="document.getElementById('fileInput').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--gold)';this.style.background='rgba(200,155,60,.06)'"
+        ondragleave="this.style.borderColor='var(--border)';this.style.background=''"
+        ondrop="handleFileDrop(event)">
+        <div style="font-size:32px;margin-bottom:8px;">📂</div>
+        <div style="font-size:14px;font-weight:700;color:var(--white);margin-bottom:4px;">클릭하거나 파일을 여기에 드래그하세요</div>
+        <div style="font-size:11px;color:var(--sub);">.xlsx / .xls / .csv 파일 지원</div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileSelect(this)">
+      </div>
+      <div id="previewWrap" style="display:none;">
+        <div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:6px;">📋 미리보기 (<span id="previewCount">0</span>명)</div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;max-height:260px;overflow-y:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:11px;">
+            <thead>
+              <tr style="background:var(--bg3);">
+                <th style="padding:7px 8px;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">#</th>
+                <th style="padding:7px 8px;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">닉네임</th>
+                <th style="padding:7px 8px;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">티어</th>
+                <th style="padding:7px 8px;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">역할</th>
+                <th style="padding:7px 8px;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">패스</th>
+                <th style="padding:7px 8px;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">챔프폭</th>
+                <th style="padding:7px 8px;text-align:left;color:var(--gold);border-bottom:1px solid var(--border);">어필</th>
+              </tr>
+            </thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+        <div id="previewError" style="font-size:11px;color:var(--red);margin-top:6px;display:none;"></div>
+      </div>
+    </div>
+
+    <div class="mact" style="margin-top:16px;">
+      <button class="btn b-skip" onclick="closeBulkAdd()">취소</button>
+      <button class="btn b-bid" id="confirmBulkBtn" onclick="confirmBulkAdd()">✅ 전체 추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 유찰 인원 임의 배정 모달 -->
+<div class="overlay" id="assignModal" style="display:none;">
+  <div class="modal" style="width:480px;">
+    <h2>🎯 유찰 인원 임의 배정</h2>
+    <p style="font-size:11px;color:var(--sub);margin-bottom:16px;">유찰된 팀원을 특정 팀장에게 직접 배정합니다. (포인트 차감 없음)</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="fg">
+        <div class="flbl">배정할 팀원</div>
+        <select class="finp" id="assign_player"></select>
+      </div>
+      <div class="fg">
+        <div class="flbl">배정할 팀장</div>
+        <select class="finp" id="assign_captain"></select>
+      </div>
+    </div>
+    <div class="mact">
+      <button class="btn b-skip" onclick="closeAssign()">취소</button>
+      <button class="btn b-sold" onclick="confirmAssign()">🎯 배정 확정</button>
+    </div>
+  </div>
+</div>
+
+<!-- 팀 상세보기 모달 (진행자용) -->
+<div class="overlay" id="hostTeamDetailModal" style="display:none;" onclick="this.style.display='none'">
+  <div class="modal" style="width:460px;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div id="htdTitle" style="font-family:'Black Han Sans',sans-serif;font-size:20px;color:var(--gold);"></div>
+      <button onclick="document.getElementById('hostTeamDetailModal').style.display='none'"
+        style="background:var(--bg3);border:1px solid var(--border);color:var(--sub);font-size:13px;padding:5px 12px;border-radius:8px;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">잔여 포인트</div>
+        <div id="htdPts" style="font-family:'Black Han Sans',sans-serif;font-size:24px;color:var(--gold);"></div>
+      </div>
+      <div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">확보 팀원</div>
+        <div id="htdMem" style="font-family:'Black Han Sans',sans-serif;font-size:24px;color:var(--white);"></div>
+      </div>
+      <div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">사용 포인트</div>
+        <div id="htdSpent" style="font-family:'Black Han Sans',sans-serif;font-size:24px;color:var(--sub);"></div>
+      </div>
+    </div>
+    <div id="htdMembers" style="display:flex;flex-direction:column;gap:7px;"></div>
+  </div>
+</div>
+<div class="flash" id="flash" style="display:none;">
+  <div class="flash-box">
+    <div class="fem">🏆</div>
+    <div class="ftit" id="fTit">낙찰!</div>
+    <div class="fsub" id="fSub"></div>
+  </div>
+</div>
+
+<!-- 결과 요약 오버레이 (캡처용) -->
+<div id="resultOverlay" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(7,9,15,.96);align-items:center;justify-content:center;overflow-y:auto;padding:24px;">
+  <div style="width:100%;max-width:1200px;margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-family:'Black Han Sans',sans-serif;font-size:28px;color:var(--gold);">🏆 강세원배 경매 결과</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="downloadBidLog()" style="background:linear-gradient(135deg,#0a1a10,#102a18);color:var(--green);border:1px solid var(--green);font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;cursor:pointer;">📥 전체 로그 CSV</button>
+        <button onclick="document.getElementById('resultOverlay').style.display='none'" style="background:var(--bg3);color:var(--sub);border:1px solid var(--border);font-size:12px;font-weight:700;padding:8px 16px;border-radius:8px;cursor:pointer;">✕ 닫기</button>
+      </div>
+    </div>
+    <div id="resultGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;"></div>
+    <div style="margin-top:16px;font-size:11px;color:var(--muted);text-align:center;">캡처 팁: F11(전체화면) 후 스크롤 없이 캡처하거나 브라우저 인쇄(Ctrl+P) → PDF 저장</div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  🔥 FIREBASE CONFIG — 아래 6줄을 실제 값으로 교체하세요
+// ══════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyB2XBCwviok68_RokWMmI8B9Q4QexODzgo",
+  authDomain: "action-lol-2601.firebaseapp.com",
+  databaseURL: "https://action-lol-2601-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "action-lol-2601",
+  storageBucket: "action-lol-2601.firebasestorage.app",
+  messagingSenderId: "87438019571",
+  appId: "1:87438019571:web:217901e16dd09c423ce086"
+};
+// ══════════════════════════════════════════════
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const ref = db.ref('auction');
+const reqRef = db.ref('bidRequests');
+
+// ── bidRequests 자동 처리 (팀장 입찰 → 진행자 화면 자동 반영) ──
+reqRef.on('child_added', snap => {
+  const req = snap.val();
+  if (!req || !captains.length) { snap.ref.remove(); return; }
+
+  const cap = captains.find(c => c.id === req.capId);
+  if (!cap) { snap.ref.remove(); return; }
+
+  if (cap.isFull) { snap.ref.remove(); return; }
+  if (req.amount > cap.points) { snap.ref.remove(); return; }
+  if (req.amount <= currentBid) { snap.ref.remove(); return; }
+
+  currentBid = req.amount;
+  currentBidCap = cap;
+  bidLog.push({ cap, amount: req.amount });
+  fullBidLog.push({ round: currentIdx+1, playerNick: getActivePlayers()[currentIdx]?.nick||'', capName: cap.name, amount: req.amount, ts: new Date().toLocaleTimeString() });
+
+  document.getElementById('bidNum').innerHTML = `${req.amount}<span>점</span>`;
+  document.getElementById('bidWho').innerHTML = `최고 입찰자: <strong>${cap.name}</strong>`;
+  document.getElementById('bidAmt').value = req.amount + 1;
+  renderLog();
+  renderCapSel();
+  pushState();
+  snap.ref.remove();
+  showBidAlert(cap.name, req.amount);
+  resetCountdown(); // 팀장 입찰 시 카운트다운 리셋
+});
+
+function showBidAlert(name, amt) {
+  const el = document.createElement('div');
+  el.style.cssText = `position:fixed;top:70px;right:20px;z-index:300;background:linear-gradient(135deg,#17140a,#231a0a);border:1px solid var(--gold);border-radius:10px;padding:10px 18px;font-size:13px;animation:fi .3s ease;`;
+  el.innerHTML = `<span style="color:var(--gold);font-weight:700;">${name}</span> <span style="color:var(--sub);">입찰</span> <span style="color:var(--white);font-weight:700;">${amt}점</span>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2000);
+}
+
+// ── 로컬 상태 ──
+let captains = [];
+let players = [];
+let currentIdx = 0;
+let currentBid = 0;
+let currentBidCap = null;
+let bidLog = [];
+let skipped = [];
+let isReauction = false;
+let soldHistory = [];
+let fullBidLog = [];
+let roomCode = ''; // 전역 방코드
+
+const ROLE_EM = { '탱커':'🛡️','딜러':'⚔️','서포터':'💊' };
+const TIER_EM = { '언랭':'⬜','아이언':'🪨','브론즈':'🟫','실버':'⚪','골드':'🟡','플래티넘':'🩵','에메랄드':'💚','다이아몬드':'💎','다이아':'💎','마스터':'🔮','그랜드마스터':'🔴','챌린저':'👑' };
+
+// ── 셋업 ──
+function initSetup() {}
+
+function adjustCap(delta) {
+  const inp = document.getElementById('maxCapInput');
+  const v = Math.min(20, Math.max(2, (parseInt(inp.value)||10) + delta));
+  inp.value = v;
+}
+
+function startApp() {
+  roomCode = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+  if (!roomCode) { alert('방 코드를 입력하세요!'); return; }
+  const maxCap = Math.min(20, Math.max(2, parseInt(document.getElementById('maxCapInput').value) || 10));
+
+  // 팀장 슬롯을 설정한 수만큼 초기화
+  captains = Array.from({length: maxCap}, (_,i) => ({
+    id: i, order: i+1, name: `팀장${i+1}`,
+    points: 400, members: [], isFull: false
+  }));
+
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  // Firebase에 방코드 + 팀장 수 저장
+  db.ref('roomCode').set(roomCode);
+  db.ref('maxCaptains').set(maxCap);
+  // 팀장 등록용 슬롯도 초기화
+  db.ref('captainSlots').set(null);
+
+  // 방코드 배지 — 초기에는 숨김
+  const badge = document.createElement('div');
+  badge.id = 'rcBadge';
+  badge.style.cssText = 'display:none;position:fixed;bottom:16px;right:16px;z-index:999;background:linear-gradient(135deg,#17140a,#231a0a);border:2px solid var(--gold);border-radius:12px;padding:10px 20px;text-align:center;';
+  badge.innerHTML = `<div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:3px;">팀장 입장 코드</div><div style="font-family:'Black Han Sans',sans-serif;font-size:24px;color:var(--gold);letter-spacing:5px;">${roomCode}</div><div style="font-size:10px;color:var(--muted);margin-top:4px;">팀장 ${maxCap}명</div>`;
+  document.body.appendChild(badge);
+  document.getElementById('toggleCodeBtn').textContent = '🔑 코드 보기';
+
+  // 팀장 접속 실시간 반영
+  db.ref('captainSlots').on('value', snap => {
+    const slots = snap.val() || {};
+    const slotArr = Object.values(slots);
+    slotArr.forEach(slot => {
+      const cap = captains.find(c => c.id === slot.id);
+      if (cap && cap.name !== slot.name) {
+        cap.name = slot.name;
+        renderCapList();
+        renderCapSel();
+      }
+    });
+    // 헤더 진행 상황 업데이트
+    document.getElementById('hStatus').textContent = `LIVE 진행 중 — 팀장 ${slotArr.length}/${maxCap}명 접속`;
+  });
+
+  pushState();
+  db.ref('auctionOpen').set(false);
+  db.ref('countdownSignal').set({ running: false, startedAt: 0 });
+  renderAll();
+  document.getElementById('hStatus').textContent = 'LIVE 진행 중';
+  initChat('진행자');
+  // 방 생성 완료 팝업
+  showToast('🏠 방이 생성되었습니다! 방코드: ' + roomCode, 'gold');
+  // 1시간 후 채팅 자동 삭제
+  setTimeout(() => {
+    if (window._chatRef) window._chatRef.remove();
+    showToast('🧹 채팅 기록이 자동 삭제되었습니다', 'sub');
+  }, 60 * 60 * 1000);
+}
+
+// ── Firebase push ──
+function pushState() {
+  ref.set({
+    captains: captains.map(c => ({
+      id: c.id, order: c.order, name: c.name,
+      points: c.points, isFull: c.isFull,
+      members: c.members.map(m => ({ nick: m.nick, price: m.price }))
+    })),
+    players: players.map(p => ({
+      id: p.id, nick: p.nick, tier: p.tier||'', role: p.role||'', pass: p.pass||'',
+      champ: p.champ||'', appeal: p.appeal||'',
+      soldTo: (p.soldTo !== undefined && p.soldTo !== null) ? p.soldTo.id : -1, price: p.price||0
+    })),
+    currentIdx,
+    currentBid,
+    currentBidCapId: currentBidCap ? currentBidCap.id : null,
+    bidLog: bidLog.map(b => ({ capId: b.cap.id, capName: b.cap.name, amount: b.amount })),
+    skipped: skipped.map(p => p.id),
+    isReauction,
+    ts: Date.now()
+  });
+  document.getElementById('hProg').textContent = `완료 ${players.filter(p=>p.soldTo && p.soldTo !== -1).length}/${players.length}명`;
+}
+
+// ── Firebase 객체/배열 안전 변환 ──
+function toArr(obj) {
+  if (!obj) return [];
+  if (Array.isArray(obj)) return obj;
+  return Object.values(obj);
+}
+
+// ── 효과음 (Web Audio API) ──
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(type) {
+  try {
+    const g = AC.createGain();
+    g.connect(AC.destination);
+    if (type === 'start') {
+      // 경매 시작: 상승 팡파레
+      [523, 659, 784, 1047].forEach((f, i) => {
+        const o = AC.createOscillator();
+        o.connect(g); o.type = 'sine'; o.frequency.value = f;
+        const t = AC.currentTime + i * 0.12;
+        g.gain.setValueAtTime(0.3, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        o.start(t); o.stop(t + 0.25);
+      });
+    } else if (type === 'bid') {
+      // 입찰: 짧은 틱
+      const o = AC.createOscillator();
+      o.connect(g); o.type = 'sine'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.2, AC.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.1);
+      o.start(); o.stop(AC.currentTime + 0.1);
+    } else if (type === 'sold') {
+      // 낙찰: 승리 팡파레
+      [523, 523, 784, 784, 1047].forEach((f, i) => {
+        const o = AC.createOscillator();
+        o.connect(g); o.type = 'triangle'; o.frequency.value = f;
+        const t = AC.currentTime + i * 0.15;
+        g.gain.setValueAtTime(0.35, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        o.start(t); o.stop(t + 0.3);
+      });
+    } else if (type === 'skip') {
+      // 유찰: 하강음
+      const o = AC.createOscillator();
+      o.connect(g); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(400, AC.currentTime);
+      o.frequency.exponentialRampToValueAtTime(150, AC.currentTime + 0.4);
+      g.gain.setValueAtTime(0.2, AC.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.4);
+      o.start(); o.stop(AC.currentTime + 0.4);
+    } else if (type === 'tick') {
+      // 카운트다운 틱
+      const o = AC.createOscillator();
+      o.connect(g); o.type = 'sine'; o.frequency.value = 660;
+      g.gain.setValueAtTime(0.15, AC.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.05);
+      o.start(); o.stop(AC.currentTime + 0.05);
+    } else if (type === 'urgent') {
+      // 카운트다운 긴박
+      const o = AC.createOscillator();
+      o.connect(g); o.type = 'square'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.18, AC.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.08);
+      o.start(); o.stop(AC.currentTime + 0.08);
+    }
+  } catch(e) {}
+}
+
+// ── 카운트다운 ──
+let countdownTimer = null;
+let countdownSec = 10;
+let auctionStarted = false;
+
+function startCountdown() {
+  clearCountdown();
+  countdownSec = 10;
+  auctionStarted = true;
+  document.getElementById('countdownWrap').classList.add('active');
+  updateCountdownUI();
+  db.ref('countdownSignal').set({ running: true, startedAt: Date.now() });
+  countdownTimer = setInterval(() => {
+    countdownSec--;
+    updateCountdownUI();
+    if (countdownSec <= 3 && countdownSec > 0) playSound('urgent');
+    else if (countdownSec > 0) playSound('tick');
+    if (countdownSec <= 0) {
+      clearCountdown();
+      if (currentBidCap) confirmSold();
+      else skipPlayer();
+    }
+  }, 1000);
+}
+
+function resetCountdown() {
+  if (!auctionStarted) return;
+  clearInterval(countdownTimer);
+  countdownSec = 10;
+  updateCountdownUI();
+  playSound('bid');
+  db.ref('countdownSignal').set({ running: true, startedAt: Date.now() });
+  countdownTimer = setInterval(() => {
+    countdownSec--;
+    updateCountdownUI();
+    if (countdownSec <= 3 && countdownSec > 0) playSound('urgent');
+    else if (countdownSec > 0) playSound('tick');
+    if (countdownSec <= 0) {
+      clearCountdown();
+      if (currentBidCap) confirmSold();
+      else skipPlayer();
+    }
+  }, 1000);
+}
+
+function clearCountdown() {
+  clearInterval(countdownTimer);
+  countdownTimer = null;
+  auctionStarted = false;
+  document.getElementById('countdownWrap').classList.remove('active');
+  countdownSec = 10;
+  updateCountdownUI();
+  db.ref('countdownSignal').set({ running: false, startedAt: 0 });
+  db.ref('auctionOpen').set(false); // 낙찰/유찰 후 입찰 차단
+}
+
+function updateCountdownUI() {
+  const pct = (countdownSec / 10) * 100;
+  const bar = document.getElementById('countdownBar');
+  const num = document.getElementById('countdownNum');
+  bar.style.width = pct + '%';
+  num.textContent = countdownSec;
+  const urgent = countdownSec <= 3;
+  bar.className = 'countdown-bar' + (urgent ? ' urgent' : '');
+  num.className = 'countdown-num' + (urgent ? ' urgent' : '');
+}
+
+function startAuctionForPlayer() {
+  const active = getActivePlayers();
+  const player = active[currentIdx];
+  if (!player) return;
+  // 입찰 허용 상태를 먼저 열고 시작 신호를 보냅니다.
+  db.ref('auctionOpen').set(true);
+  db.ref('auctionSignal').set({
+    playerNick: player.nick,
+    playerRole: player.role || '',
+    playerTier: player.tier || '',
+    ts: Date.now()
+  });
+  document.getElementById('startAuctionBtn').style.display = 'none';
+  startCountdown();
+  playSound('start');
+}
+
+// ── 전체 초기화 ──
+function resetAll() {
+  if (!confirm('⚠️ 경매 데이터를 전부 초기화할까요?\n팀장 포인트, 팀원, 입찰 내역 모두 리셋됩니다.')) return;
+  players = []; skipped = []; isReauction = false;
+  currentIdx = 0; currentBid = 0; currentBidCap = null; bidLog = [];
+  captains.forEach(c => { c.points = 400; c.members = []; c.isFull = false; });
+  ref.remove();
+  reqRef.remove();
+  db.ref('roomCode').remove();
+  db.ref('captainSlots').remove();
+  db.ref('maxCaptains').remove();
+  const b = document.getElementById('rcBadge');
+  if (b) b.remove();
+  resetBid();
+  renderAll();
+  db.ref('auctionOpen').set(false);
+  db.ref('countdownSignal').set({ running: false, startedAt: 0 });
+  document.getElementById('hStatus').textContent = 'LIVE 진행 중 (초기화됨)';
+  document.getElementById('hProg').textContent = '';
+}
+
+// ── 10명 일괄 추가 (직접입력 + 엑셀/CSV) ──
+let excelRows = []; // 엑셀에서 파싱된 데이터
+let currentBulkTab = 'manual';
+
+function switchBulkTab(tab) {
+  currentBulkTab = tab;
+  document.getElementById('panelManual').style.display = tab === 'manual' ? '' : 'none';
+  document.getElementById('panelExcel').style.display = tab === 'excel' ? '' : 'none';
+  const tManual = document.getElementById('tabManual');
+  const tExcel = document.getElementById('tabExcel');
+  if (tab === 'manual') {
+    tManual.style.cssText = 'padding:8px 20px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#07090f;font-size:12px;font-weight:700;border:none;border-radius:8px 8px 0 0;cursor:pointer;margin-right:4px;';
+    tExcel.style.cssText = 'padding:8px 20px;background:var(--bg3);color:var(--sub);font-size:12px;font-weight:700;border:none;border-radius:8px 8px 0 0;cursor:pointer;border:1px solid var(--border);border-bottom:none;';
+  } else {
+    tExcel.style.cssText = 'padding:8px 20px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#07090f;font-size:12px;font-weight:700;border:none;border-radius:8px 8px 0 0;cursor:pointer;';
+    tManual.style.cssText = 'padding:8px 20px;background:var(--bg3);color:var(--sub);font-size:12px;font-weight:700;border:none;border-radius:8px 8px 0 0;cursor:pointer;margin-right:4px;border:1px solid var(--border);border-bottom:none;';
+  }
+}
+
+function openBulkAdd() {
+  excelRows = [];
+  currentBulkTab = 'manual';
+  // 직접입력 그리드 초기화
+  const grid = document.getElementById('bulkGrid');
+  let html = '';
+  for (let i = 0; i < 10; i++) {
+    html += `<div style="display:grid;grid-template-columns:28px 1fr 90px 80px 60px 80px 1fr;gap:5px;align-items:center;">
+      <div style="font-size:10px;color:var(--muted);text-align:center;font-weight:700;">${i+1}</div>
+      <input class="finp" id="b_nick_${i}" placeholder="닉네임" style="font-size:12px;padding:7px 9px;">
+      <input class="finp" id="b_tier_${i}" placeholder="티어" style="font-size:11px;padding:7px 6px;color:var(--gold);" list="tierList">
+      <datalist id="tierList">
+        <option value="언랭"><option value="아이언"><option value="브론즈"><option value="실버">
+        <option value="골드"><option value="플래티넘"><option value="에메랄드">
+        <option value="다이아몬드"><option value="마스터"><option value="그랜드마스터"><option value="챌린저">
+      </datalist>
+      <select class="finp" id="b_role_${i}" style="font-size:11px;padding:7px 4px;">
+        <option value="">역할</option><option value="딜러">⚔️딜러</option><option value="탱커">🛡️탱커</option><option value="서포터">💊서폿</option>
+      </select>
+      <input class="finp" id="b_pass_${i}" placeholder="패스" style="font-size:11px;padding:7px 6px;color:var(--green);" title="숫자만 입력하면 Lv. 자동 붙음">
+      <input class="finp" id="b_champ_${i}" placeholder="챔프폭" style="font-size:11px;padding:7px 6px;color:var(--blue);">
+      <input class="finp" id="b_appeal_${i}" placeholder="한줄 어필" style="font-size:11px;padding:7px 6px;color:var(--sub);">
+    </div>`;
+  }
+  grid.innerHTML = html;
+  // 엑셀 탭 초기화
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('previewBody').innerHTML = '';
+  document.getElementById('fileInput').value = '';
+  const dz = document.getElementById('dropZone');
+  dz.style.borderColor = 'var(--border)';
+  dz.style.background = '';
+  // 탭 초기화
+  switchBulkTab('manual');
+  document.getElementById('bulkModal').style.display = 'flex';
+  document.getElementById('b_nick_0').focus();
+}
+
+function closeBulkAdd() {
+  document.getElementById('bulkModal').style.display = 'none';
+}
+
+// CSV 양식 다운로드
+function downloadTemplate() {
+  const header = '닉네임,티어,역할,패스레벨,챔프폭레벨,한줄어필\n';
+  const example = '예시선수,에메랄드,딜러,45,넓음,팀운 좋습니다!\n';
+  const blob = new Blob(['\uFEFF' + header + example], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = '팀원_등록_양식.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// 파일 드롭
+function handleFileDrop(e) {
+  e.preventDefault();
+  const dz = document.getElementById('dropZone');
+  dz.style.borderColor = 'var(--border)'; dz.style.background = '';
+  const file = e.dataTransfer.files[0];
+  if (file) parseFile(file);
+}
+
+function handleFileSelect(input) {
+  if (input.files[0]) parseFile(input.files[0]);
+}
+
+function parseFile(file) {
+  const errEl = document.getElementById('previewError');
+  errEl.style.display = 'none';
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  if (ext === 'csv') {
+    const reader = new FileReader();
+    reader.onload = e => parseCSV(e.target.result);
+    reader.readAsText(file, 'UTF-8');
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        processRows(rows);
+      } catch(err) {
+        showParseError('파일을 읽을 수 없습니다: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    showParseError('.xlsx / .xls / .csv 파일만 지원합니다');
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
+  const rows = lines.map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
+  processRows(rows);
+}
+
+const ROLE_NORMALIZE = {
+  '딜러':'딜러','딜':'딜러','dps':'딜러','deal':'딜러',
+  '탱커':'탱커','탱':'탱커','tank':'탱커',
+  '서포터':'서포터','서폿':'서포터','힐':'서포터','support':'서포터','sup':'서포터'
+};
+
+function processRows(rows) {
+  let startRow = 0;
+  if (rows.length > 0) {
+    const first = (rows[0][0] || '').toLowerCase();
+    if (['닉네임','nick','nickname','이름','name'].includes(first)) startRow = 1;
+  }
+  excelRows = [];
+  for (let i = startRow; i < rows.length; i++) {
+    const row = rows[i];
+    const nick = String(row[0] || '').trim();
+    if (!nick) continue;
+    const tier = String(row[1] || '').trim();
+    const roleRaw = String(row[2] || '').trim().toLowerCase();
+    const role = ROLE_NORMALIZE[roleRaw] || (row[2] ? String(row[2]).trim() : '');
+    const passRaw = String(row[3] || '').trim();
+    const pass = passRaw ? (passRaw.match(/^\d+$/) ? `Lv.${passRaw}` : passRaw) : '';
+    const champ = String(row[4] || '').trim();
+    const appeal = String(row[5] || '').trim();
+    excelRows.push({ nick, tier, role, pass, champ, appeal });
+  }
+  if (excelRows.length === 0) { showParseError('닉네임이 있는 행을 찾을 수 없습니다.'); return; }
+  const errEl = document.getElementById('previewError'); errEl.style.display = 'none';
+  document.getElementById('previewCount').textContent = excelRows.length;
+  document.getElementById('previewBody').innerHTML = excelRows.map((r, i) => `
+    <tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:5px 8px;color:var(--muted);">${i+1}</td>
+      <td style="padding:5px 8px;font-weight:700;color:var(--white);">${esc(r.nick)}</td>
+      <td style="padding:5px 8px;color:var(--gold);">${esc(r.tier)}</td>
+      <td style="padding:5px 8px;">${esc(r.role)}</td>
+      <td style="padding:5px 8px;color:var(--green);">${esc(r.pass)}</td>
+      <td style="padding:5px 8px;color:var(--blue);">${esc(r.champ)}</td>
+      <td style="padding:5px 8px;color:var(--sub);">${esc(r.appeal)}</td>
+    </tr>`).join('');
+  document.getElementById('previewWrap').style.display = 'block';
+  const dz = document.getElementById('dropZone');
+  dz.style.borderColor = 'var(--green)'; dz.style.background = 'rgba(62,207,122,.04)';
+  dz.innerHTML = `<div style="font-size:28px;margin-bottom:6px;">✅</div><div style="font-size:13px;font-weight:700;color:var(--green);">${excelRows.length}명 인식 완료</div><div style="font-size:11px;color:var(--sub);margin-top:3px;">다른 파일을 업로드하려면 클릭하세요</div><input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileSelect(this)">`;
+}
+
+function showParseError(msg) {
+  const errEl = document.getElementById('previewError');
+  errEl.textContent = '⚠️ ' + msg;
+  errEl.style.display = 'block';
+  document.getElementById('previewWrap').style.display = 'none';
+  excelRows = [];
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function confirmBulkAdd() {
+  let added = 0;
+  if (currentBulkTab === 'excel') {
+    if (excelRows.length === 0) { alert('먼저 파일을 업로드하세요!'); return; }
+    excelRows.forEach(r => {
+      if (!r.nick) return;
+      players.push({ id: players.length, nick: r.nick, tier: r.tier, role: r.role, pass: r.pass, champ: r.champ||'', appeal: r.appeal||'', soldTo: null, price: 0 });
+      added++;
+    });
+  } else {
+    for (let i = 0; i < 10; i++) {
+      const nick = document.getElementById(`b_nick_${i}`).value.trim();
+      if (!nick) continue;
+      const passRaw = document.getElementById(`b_pass_${i}`).value.trim();
+      const pass = passRaw ? (passRaw.match(/^\d+$/) ? `Lv.${passRaw}` : passRaw) : '';
+      players.push({
+        id: players.length, nick,
+        tier: document.getElementById(`b_tier_${i}`).value.trim(),
+        role: document.getElementById(`b_role_${i}`).value,
+        pass,
+        champ: document.getElementById(`b_champ_${i}`).value.trim(),
+        appeal: document.getElementById(`b_appeal_${i}`).value.trim(),
+        soldTo: null, price: 0
+      });
+      added++;
+    }
+  }
+  if (added === 0) { alert('최소 1명은 입력해주세요!'); return; }
+  if (players.length === added) { currentIdx = 0; resetBid(); }
+  closeBulkAdd();
+  pushState();
+  renderAll();
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;background:linear-gradient(135deg,#0a1a10,#0d2415);border:1px solid var(--green);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--green);';
+  t.textContent = `✅ ${added}명 추가 완료!`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+
+// ── 유찰 인원 임의 배정 ──
+function openAssign() {
+  const allSkipped = players.filter(p => !p.soldTo && skipped.includes(p));
+  if (allSkipped.length === 0) { alert('유찰된 팀원이 없습니다!'); return; }
+
+  const pSel = document.getElementById('assign_player');
+  pSel.innerHTML = allSkipped.map(p =>
+    `<option value="${p.id}">${p.nick} (${p.tier||'티어없음'} / ${p.role||'역할없음'})</option>`
+  ).join('');
+
+  const cSel = document.getElementById('assign_captain');
+  cSel.innerHTML = captains.filter(c => !c.isFull).map(c =>
+    `<option value="${c.id}">${c.order}번 ${c.name} (${c.points}점 / 팀원 ${c.members.length}명)</option>`
+  ).join('');
+
+  document.getElementById('assignModal').style.display = 'flex';
+}
+
+function closeAssign() {
+  document.getElementById('assignModal').style.display = 'none';
+}
+
+function confirmAssign() {
+  const playerId = parseInt(document.getElementById('assign_player').value);
+  const capId = parseInt(document.getElementById('assign_captain').value);
+  const player = players.find(p => p.id === playerId);
+  const cap = captains.find(c => c.id === capId);
+  if (!player || !cap) return;
+
+  // 포인트 차감 없이 배정
+  player.soldTo = cap;
+  player.price = 0;
+  cap.members.push(player);
+  if (cap.members.length >= 4) cap.isFull = true;
+
+  // 유찰 목록에서 제거
+  const idx = skipped.indexOf(player);
+  if (idx > -1) skipped.splice(idx, 1);
+  if (isReauction && currentIdx >= skipped.length) currentIdx = 0;
+
+  closeAssign();
+  showFlash(player.nick, cap.name + ' (임의배정)', 0);
+  setTimeout(() => {
+    pushState();
+    renderAll();
+  }, 900);
+}
+
+// ── 포인트 지급/회수 ──
+let ptsSign = 1; // 1=지급, -1=회수
+
+function openPointsModal() {
+  ptsSign = 1;
+  const sel = document.getElementById('pts_cap');
+  sel.innerHTML = `<option value="all">👑 전체 팀장 (일괄 적용)</option>` +
+    captains.map(c => `<option value="${c.id}">${c.order}번 ${c.name} (현재 ${c.points}점)</option>`).join('');
+  document.getElementById('pts_amount').value = '';
+  document.getElementById('pts_reason').value = '';
+  document.getElementById('pointsPreview').style.display = 'none';
+  // 버튼 스타일 초기화
+  document.getElementById('pts_btn_give').style.cssText = 'flex:1;padding:10px;border-radius:8px;border:2px solid var(--green);background:rgba(62,207,122,.15);color:var(--green);font-size:13px;font-weight:800;cursor:pointer;';
+  document.getElementById('pts_btn_take').style.cssText = 'flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--sub);font-size:13px;font-weight:800;cursor:pointer;';
+  document.getElementById('pointsModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('pts_amount').focus(), 100);
+}
+
+function setPtsSign(sign) {
+  ptsSign = sign;
+  if (sign === 1) {
+    document.getElementById('pts_btn_give').style.cssText = 'flex:1;padding:10px;border-radius:8px;border:2px solid var(--green);background:rgba(62,207,122,.2);color:var(--green);font-size:13px;font-weight:800;cursor:pointer;';
+    document.getElementById('pts_btn_take').style.cssText = 'flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--sub);font-size:13px;font-weight:800;cursor:pointer;';
+  } else {
+    document.getElementById('pts_btn_take').style.cssText = 'flex:1;padding:10px;border-radius:8px;border:2px solid var(--red);background:rgba(232,64,64,.15);color:var(--red);font-size:13px;font-weight:800;cursor:pointer;';
+    document.getElementById('pts_btn_give').style.cssText = 'flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--sub);font-size:13px;font-weight:800;cursor:pointer;';
+  }
+  previewPointsChange();
+}
+
+function previewPointsChange() {
+  const amt = parseInt(document.getElementById('pts_amount').value) || 0;
+  const capId = document.getElementById('pts_cap').value;
+  const delta = ptsSign * amt;
+  if (!amt) { document.getElementById('pointsPreview').style.display = 'none'; return; }
+
+  const targets = capId === 'all' ? captains : captains.filter(c => c.id === parseInt(capId));
+  const color = delta >= 0 ? 'var(--green)' : 'var(--red)';
+  const sign = delta >= 0 ? '+' : '';
+
+  document.getElementById('pointsPreviewList').innerHTML = targets.map(c => {
+    const after = c.points + delta;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);">
+      <span style="font-weight:700;">${c.name}</span>
+      <span>${c.points}점 → <strong style="color:${color};font-size:14px;">${after}점</strong> <span style="color:${color};">(${sign}${delta})</span></span>
+    </div>`;
+  }).join('');
+  document.getElementById('pointsPreview').style.display = 'block';
+}
+
+function applyPointsChange() {
+  const amt = parseInt(document.getElementById('pts_amount').value) || 0;
+  if (!amt) { alert('포인트 수량을 입력하세요'); return; }
+  const delta = ptsSign * amt;
+  const capId = document.getElementById('pts_cap').value;
+  const reason = document.getElementById('pts_reason').value.trim();
+  const targets = capId === 'all' ? captains : captains.filter(c => c.id === parseInt(capId));
+
+  targets.forEach(c => {
+    c.points = Math.max(0, c.points + delta);
+  });
+
+  document.getElementById('pointsModal').style.display = 'none';
+  pushState();
+  renderAll();
+
+  const label = delta >= 0 ? `+${delta}점 지급` : `${delta}점 회수`;
+  const names = targets.map(c => c.name).join(', ');
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;background:linear-gradient(135deg,#0a1a10,#102a18);border:1px solid var(--green);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--green);`;
+  t.textContent = `💰 ${names} ${label}${reason?' — '+reason:''}`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+// ── 경매 순서 랜덤 셔플 ──
+function shuffleQueue() {
+  if (!players.length) { alert('팀원이 없습니다!'); return; }
+  const soldCount = players.filter(p => p.soldTo !== null).length;
+  const msg = soldCount > 0
+    ? `⚠️ 이미 낙찰된 ${soldCount}명을 제외하고 나머지 순서를 셔플할까요?`
+    : '🔀 경매 순서를 랜덤으로 섞을까요?';
+  if (!confirm(msg)) return;
+
+  // 낙찰된 선수 위치 고정, 미낙찰만 셔플
+  const unsold = players.filter(p => p.soldTo === null);
+  for (let i = unsold.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [unsold[i], unsold[j]] = [unsold[j], unsold[i]];
+  }
+  let ui = 0;
+  players.forEach((p, i) => { if (p.soldTo === null) players[i] = unsold[ui++]; });
+  players.forEach((p, i) => p.id = i);
+  currentIdx = players.findIndex(p => p.soldTo === null);
+  if (currentIdx === -1) currentIdx = 0;
+
+  pushState(); renderAll();
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;background:linear-gradient(135deg,#1a0a2a,#251040);border:1px solid #c070f0;border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:#c070f0;';
+  t.textContent = `🔀 ${unsold.length}명 순서 셔플 완료!`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+
+function openEditPlayer(id) {
+  const p = players.find(pl => pl.id === id);
+  if (!p) return;
+  document.getElementById('edit_id').value = id;
+  document.getElementById('edit_nick').value = p.nick;
+  document.getElementById('edit_tier').value = p.tier || '';
+  document.getElementById('edit_role').value = p.role || '';
+  document.getElementById('edit_pass').value = p.pass ? p.pass.replace('Lv.','') : '';
+  document.getElementById('edit_champ').value = p.champ || '';
+  document.getElementById('edit_appeal').value = p.appeal || '';
+  document.getElementById('editModal').style.display = 'flex';
+  document.getElementById('edit_nick').focus();
+}
+function closeEditPlayer() { document.getElementById('editModal').style.display = 'none'; }
+
+function saveEditPlayer() {
+  const id = parseInt(document.getElementById('edit_id').value);
+  const p = players.find(pl => pl.id === id);
+  if (!p) return;
+  const nick = document.getElementById('edit_nick').value.trim();
+  if (!nick) { alert('닉네임을 입력해주세요!'); return; }
+  const passRaw = document.getElementById('edit_pass').value.trim();
+  p.nick = nick;
+  p.tier = document.getElementById('edit_tier').value.trim();
+  p.role = document.getElementById('edit_role').value;
+  p.pass = passRaw ? (passRaw.match(/^\d+$/) ? `Lv.${passRaw}` : passRaw) : '';
+  p.champ = document.getElementById('edit_champ').value.trim();
+  p.appeal = document.getElementById('edit_appeal').value.trim();
+  closeEditPlayer();
+  pushState(); renderAll();
+}
+
+function deletePlayer() {
+  const id = parseInt(document.getElementById('edit_id').value);
+  const p = players.find(pl => pl.id === id);
+  if (!p) return;
+  if (!confirm(`⚠️ "${p.nick}"을 삭제할까요?`)) return;
+  const idx = players.indexOf(p);
+  players.splice(idx, 1);
+  // id 재정렬
+  players.forEach((pl, i) => pl.id = i);
+  if (currentIdx >= players.length) currentIdx = Math.max(0, players.length - 1);
+  closeEditPlayer();
+  pushState(); renderAll();
+}
+function closeAddPlayer() { document.getElementById('addModal').style.display = 'none'; ['f_nick','f_tier','f_pass','f_champ','f_appeal'].forEach(id => document.getElementById(id).value = ''); document.getElementById('f_role').value = ''; }
+
+function addPlayer() {
+  const nick = document.getElementById('f_nick').value.trim();
+  if (!nick) { alert('닉네임을 입력해주세요!'); return; }
+  const passRaw = document.getElementById('f_pass').value.trim();
+  const player = {
+    id: players.length, nick,
+    tier: document.getElementById('f_tier').value.trim(),
+    role: document.getElementById('f_role').value,
+    pass: passRaw ? (passRaw.match(/^\d+$/) ? `Lv.${passRaw}` : passRaw) : '',
+    champ: document.getElementById('f_champ').value.trim(),
+    appeal: document.getElementById('f_appeal').value.trim(),
+    soldTo: null, price: 0
+  };
+  players.push(player);
+  closeAddPlayer();
+  if (players.length === 1) { currentIdx = 0; resetBid(); }
+  pushState();
+  renderAll();
+}
+
+// ── 입찰 ──
+function getActivePlayers() {
+  // 재경매 모드면 유찰 목록만, 아니면 전체 players 순서 그대로 (유찰 포함)
+  return isReauction ? skipped : players;
+}
+
+function resetBid() {
+  currentBid = 0; currentBidCap = null; bidLog = [];
+  document.getElementById('bidNum').innerHTML = '0<span>점</span>';
+  document.getElementById('bidWho').textContent = '입찰자 없음';
+  document.getElementById('logList').innerHTML = '';
+  document.getElementById('bidAmt').value = '';
+}
+
+function placeBid() {
+  const capId = parseInt(document.getElementById('capSel').value);
+  const amt = parseInt(document.getElementById('bidAmt').value);
+  if (!amt || amt <= 0) { alert('포인트를 입력해주세요!'); return; }
+  const cap = captains.find(c => c.id === capId);
+  if (!cap) return;
+  if (cap.isFull) { alert(`${cap.name}님은 팀원 4명이 찼습니다!`); return; }
+  if (amt > cap.points) { alert(`포인트 부족! (보유: ${cap.points}점)`); return; }
+  if (amt <= currentBid) { alert(`현재 최고가(${currentBid}점)보다 높아야 합니다!`); return; }
+  currentBid = amt; currentBidCap = cap;
+  bidLog.push({ cap, amount: amt });
+  fullBidLog.push({ round: currentIdx+1, playerNick: getActivePlayers()[currentIdx]?.nick||'', capName: cap.name, amount: amt, ts: new Date().toLocaleTimeString() });
+  document.getElementById('bidNum').innerHTML = `${amt}<span>점</span>`;
+  document.getElementById('bidWho').innerHTML = `최고 입찰자: <strong>${cap.name}</strong>`;
+  document.getElementById('bidAmt').value = amt + 1;
+  renderLog();
+  renderCapSel();
+  pushState();
+  resetCountdown(); // 입찰 시 카운트다운 리셋
+}
+
+function confirmSold() {
+  if (!currentBidCap) { alert('입찰자가 없습니다!'); return; }
+  const active = getActivePlayers();
+  const player = active[currentIdx];
+  if (!player) return;
+  clearCountdown();
+  playSound('sold');
+
+  // 낙찰 취소를 위한 스냅샷 저장 (차감 전 포인트 저장)
+  soldHistory.push({
+    playerIdx: currentIdx,
+    player: player,
+    cap: currentBidCap,
+    price: currentBid,
+    capPointsBefore: currentBidCap.points, // 차감 전 값 그대로
+    isReauction: isReauction,
+    skippedSnapshot: [...skipped]
+  });
+
+  currentBidCap.points -= currentBid;
+  currentBidCap.members.push(player);
+  if (currentBidCap.members.length >= 4) currentBidCap.isFull = true;
+  player.soldTo = currentBidCap; player.price = currentBid;
+  fullBidLog.push({ round: currentIdx+1, playerNick: player.nick, capName: currentBidCap.name, amount: currentBid, ts: new Date().toLocaleTimeString(), result: '낙찰' });
+  if (isReauction) {
+    const si = skipped.indexOf(player);
+    if (si > -1) skipped.splice(si, 1);
+  }
+  showFlash(player.nick, currentBidCap.name, currentBid);
+  db.ref('auctionResult').set({ type: 'sold', playerNick: player.nick, capName: currentBidCap.name, price: currentBid, ts: Date.now() });
+  setTimeout(() => {
+    if (!isReauction) currentIdx++;
+    else { if (currentIdx >= skipped.length) currentIdx = 0; }
+    checkReauction();
+    resetBid();
+    document.getElementById('startAuctionBtn').style.display = 'block';
+    pushState();
+    renderAll();
+  }, 900);
+}
+
+// ── 낙찰 취소 (롤백) ──
+function rollbackSold() {
+  if (!soldHistory.length) { alert('취소할 낙찰 내역이 없습니다!'); return; }
+  if (!confirm('⚠️ 마지막 낙찰을 취소하고 이전 상태로 되돌릴까요?')) return;
+
+  const snap = soldHistory.pop();
+  const { player, cap, price, capPointsBefore, isReauction: wasRea, skippedSnapshot } = snap;
+
+  // 팀장 포인트/팀원 복원
+  cap.points = capPointsBefore;
+  cap.members = cap.members.filter(m => m !== player);
+  cap.isFull = cap.members.length >= 4;
+
+  // 선수 상태 복원
+  player.soldTo = null; player.price = 0;
+
+  // 인덱스 복원
+  currentIdx = snap.playerIdx;
+  isReauction = wasRea;
+  skipped.length = 0;
+  skippedSnapshot.forEach(p => skipped.push(p));
+
+  clearCountdown();
+  resetBid();
+  document.getElementById('startAuctionBtn').style.display = 'block';
+  pushState();
+  renderAll();
+
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;background:linear-gradient(135deg,#2a1a0a,#3a2510);border:1px solid #f0a040;border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:#f0a040;';
+  t.textContent = `🔄 ${player.nick} 낙찰 취소 완료`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function skipPlayer() {
+  const active = getActivePlayers();
+  const player = active[currentIdx];
+  if (!player) return;
+  clearCountdown();
+  playSound('skip');
+  db.ref('auctionResult').set({ type: 'skip', playerNick: player.nick, ts: Date.now() });
+  if (!isReauction) {
+    skipped.push(player);
+    currentIdx++;
+  } else {
+    currentIdx++;
+  }
+  checkReauction();
+  resetBid();
+  document.getElementById('startAuctionBtn').style.display = 'block';
+  pushState();
+  renderAll();
+}
+
+function undoBid() {
+  if (!bidLog.length) return;
+  bidLog.pop();
+  if (bidLog.length > 0) {
+    const last = bidLog[bidLog.length-1];
+    currentBid = last.amount; currentBidCap = last.cap;
+    document.getElementById('bidNum').innerHTML = `${last.amount}<span>점</span>`;
+    document.getElementById('bidWho').innerHTML = `최고 입찰자: <strong>${last.cap.name}</strong>`;
+    document.getElementById('bidAmt').value = last.amount + 1;
+  } else {
+    currentBid = 0; currentBidCap = null;
+    document.getElementById('bidNum').innerHTML = '0<span>점</span>';
+    document.getElementById('bidWho').textContent = '입찰자 없음';
+    document.getElementById('bidAmt').value = '';
+  }
+  renderLog();
+  renderCapSel();
+  pushState();
+}
+
+function checkReauction() {
+  if (!isReauction) {
+    // 일반 경매 끝났는지 확인 (전체 40명 다 지나갔을 때)
+    if (currentIdx >= players.length) {
+      if (skipped.length > 0) {
+        const hasPoints = captains.some(c => c.points > 0 && !c.isFull);
+        if (hasPoints) {
+          isReauction = true; currentIdx = 0;
+          showReaBanner();
+          return;
+        }
+      }
+      showEndScreen();
+    }
+  } else {
+    // 재경매 끝났는지 확인
+    if (currentIdx >= skipped.length) {
+      showEndScreen();
+    }
+  }
+}
+
+// ── 렌더 ──
+function renderAll() {
+  renderCapSel(); renderCapList(); renderQueue(); renderCurrentPlayer();
+}
+
+function getEM(p) { return ROLE_EM[p.role] || '👤'; }
+
+function renderCurrentPlayer() {
+  const active = getActivePlayers();
+  const p = active[currentIdx];
+  const btn = document.getElementById('startAuctionBtn');
+  if (!p) {
+    document.getElementById('pEmoji').textContent = '✅';
+    document.getElementById('pName').textContent = '경매 완료';
+    document.getElementById('pTags').innerHTML = '';
+    btn.style.display = 'none';
+    return;
+  }
+  const isSold = p.soldTo && p.soldTo !== -1;
+  const isSkip = skipped.includes(p);
+  document.getElementById('stageLabel').textContent = isReauction ? '🔁 재경매 진행 중' : '🏪 현재 경매 중';
+  document.getElementById('pEmoji').textContent = getEM(p);
+  document.getElementById('pName').textContent = p.nick;
+
+  // 라벨+값 정보 박스
+  const infoBox = document.getElementById('pInfoBox');
+  const infoItems = [
+    { lbl: '티어', val: `${TIER_EM[p.tier]||''} ${p.tier||'미입력'}`, cls: 'gold' },
+    { lbl: '주 포지션', val: `${ROLE_EM[p.role]||''} ${p.role||'미입력'}`, cls: '' },
+    { lbl: '증칼 패스레벨', val: p.pass || '미입력', cls: 'green' },
+    { lbl: '챔프폭', val: p.champ || '미입력', cls: 'blue' },
+  ];
+  infoBox.innerHTML = infoItems.map(it =>
+    `<div class="info-item"><div class="info-lbl">${it.lbl}</div><div class="info-val ${it.cls}">${it.val}</div></div>`
+  ).join('');
+
+  // 한줄 어필
+  const tagsEl = document.getElementById('pTags');
+  let tagsHtml = '';
+  if (p.appeal) tagsHtml += `<div class="info-appeal">💬 ${p.appeal}</div>`;
+  tagsHtml += `<div class="tags" style="margin-top:${p.appeal?'6px':'0'};">`;
+  if (isReauction) tagsHtml += '<span class="tag re">🔁 재경매</span>';
+  if (isSold) tagsHtml += '<span class="tag" style="border-color:#3ecf7a;color:#3ecf7a;background:#0a1a10;">✅ 낙찰완료</span>';
+  if (isSkip && !isReauction) tagsHtml += '<span class="tag" style="border-color:#ef4444;color:#ef4444;background:#1a0808;">⏭ 유찰대기</span>';
+  tagsHtml += '</div>';
+  tagsEl.innerHTML = tagsHtml;
+  document.getElementById('totN').textContent = players.length;
+  document.getElementById('doneN').textContent = players.filter(p=>p.soldTo && p.soldTo !== -1).length;
+  // 경매 시작 버튼: 카운트다운 안 돌아가는 동안만 표시
+  btn.style.display = (!auctionStarted && !isSold && !isSkip) ? 'block' : 'none';
+  btn.textContent = `🔔 경매 시작 — ${p.nick}`;
+}
+
+function renderLog() {
+  document.getElementById('logList').innerHTML = [...bidLog].reverse().map((b,i) => `
+    <div class="log-row">
+      <span class="lo">${b.cap.order}</span>
+      <span class="ln">${b.cap.name}</span>
+      <span class="lp ${i===0?'hi':''}">${b.amount}점 ${i===0?'<span class="lbadge">최고가</span>':''}</span>
+    </div>`).join('');
+}
+
+function renderCapSel() {
+  const sel = document.getElementById('capSel');
+  const avail = captains.filter(c => !c.isFull);
+  sel.innerHTML = avail.map(c =>
+    `<option value="${c.id}">${c.order}번 ${c.name} (${c.points}점)</option>`).join('');
+}
+
+function renderCapList() {
+  document.getElementById('capList').innerHTML = captains.map(c => `
+    <div class="ccard ${c.isFull?'full':''}" onclick="showHostTeamDetail(${c.id})" style="cursor:pointer;">
+      <div class="ctop">
+        <div class="cord">${c.order}</div>
+        <div class="cname">${c.name}</div>
+        <div class="cpts ${c.points===0?'ze':c.points<80?'lo':''}">${c.points}점</div>
+      </div>
+      <div class="slots">
+        <div class="slot ldr" title="${c.name}">👑</div>
+        ${Array.from({length:4},(_,i) => {
+          const m = c.members[i];
+          return m
+            ? `<div class="slot ok" title="${m.nick} (${m.price}점)">${m.nick.slice(0,8)}</div>`
+            : `<div class="slot">${i+1}</div>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function showHostTeamDetail(capId) {
+  const c = captains.find(x => x.id === capId);
+  if (!c) return;
+  const totalSpent = 400 - c.points;
+  document.getElementById('htdTitle').textContent = `👑 ${c.name} 팀`;
+  document.getElementById('htdPts').textContent = `${c.points}점`;
+  document.getElementById('htdPts').style.color = c.points < 80 ? 'var(--red)' : 'var(--gold)';
+  document.getElementById('htdMem').textContent = `${c.members.length} / 4명`;
+  document.getElementById('htdSpent').textContent = `${totalSpent}점`;
+  document.getElementById('htdMembers').innerHTML = [
+    `<div style="background:#17140a;border:1px solid var(--gold);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:18px;">👑</span>
+      <div><div style="font-size:14px;font-weight:800;color:var(--gold);">${c.name}</div><div style="font-size:10px;color:var(--muted);">팀장</div></div>
+    </div>`,
+    ...Array.from({length:4}, (_,i) => {
+      const m = c.members[i];
+      if (!m) return `<div style="background:var(--bg);border:1px dashed var(--border);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--muted);text-align:center;">빈 슬롯 ${i+1}</div>`;
+      const p = players.find(pl => pl.nick === m.nick);
+      return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+          <div style="font-size:14px;font-weight:800;color:var(--white);">${m.nick}</div>
+          <div style="font-size:14px;font-weight:800;color:var(--green);">${m.price||0}점</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${p?.appeal?'4px':'0'};">
+          <span style="font-size:11px;color:var(--gold);">${TIER_EM[p?.tier]||''} ${p?.tier||''}</span>
+          <span style="font-size:11px;color:var(--sub);">${ROLE_EM[p?.role]||''} ${p?.role||''}</span>
+          ${p?.pass?`<span style="font-size:11px;color:var(--green);">🎫 ${p.pass}</span>`:''}
+          ${p?.champ?`<span style="font-size:11px;color:var(--blue);">🎮 ${p.champ}</span>`:''}
+        </div>
+        ${p?.appeal?`<div style="font-size:11px;color:var(--muted);font-style:italic;">💬 ${p.appeal}</div>`:''}
+      </div>`;
+    })
+  ].join('');
+  document.getElementById('hostTeamDetailModal').style.display = 'flex';
+}
+
+function renderQueue() {
+  const all = isReauction ? skipped : players;
+  const list = document.getElementById('qList');
+  list.innerHTML = all.map((p,i) => {
+    const cur = i === currentIdx;
+    const sold = p.soldTo !== null;
+    const skip = !sold && skipped.includes(p);
+    return `<div class="qi ${cur?'cur':''} ${sold?'dn':''}" id="qi-${i}">
+      <div class="qidx">${isReauction?'재경매':`#${p.id+1}`}</div>
+      <div class="qem">${getEM(p)}</div>
+      <div class="qtier">${TIER_EM[p.tier]||''} ${p.tier||''}</div>
+      <div class="qn">${p.nick}${sold?'<br>✅':skip?'<br><span style="color:#ef4444;font-size:8px;">유찰</span>':''}</div>
+      ${!sold&&!auctionStarted?`<div style="font-size:9px;color:var(--muted);margin-top:3px;cursor:pointer;" onclick="event.stopPropagation();openEditPlayer(${p.id})">✏️ 편집</div>`:''}
+    </div>`;
+  }).join('');
+  document.getElementById('totQ').textContent = all.length;
+  document.getElementById('doneQ').textContent = players.filter(p=>p.soldTo).length;
+  // 드래그 이벤트 부착
+  list.querySelectorAll('.qi').forEach((el, i) => initDrag(el, i));
+  const cur = list.querySelector('.cur');
+  if (cur) cur.scrollIntoView({inline:'center',behavior:'smooth'});
+}
+
+function showFlash(nick, capName, pts) {
+  document.getElementById('fTit').textContent = `${nick} 낙찰!`;
+  document.getElementById('fSub').textContent = `${capName} — ${pts}점`;
+  const el = document.getElementById('flash');
+  el.style.display = 'flex';
+  setTimeout(() => el.style.display = 'none', 900);
+}
+
+// ── 방코드 배지 토글 ──
+function showToast(msg, type='green') {
+  const colors = { gold:'var(--gold)', green:'var(--green)', red:'var(--red)', sub:'var(--sub)', blue:'var(--blue)' };
+  const borders = { gold:'#c89b3c', green:'#3ecf7a', red:'#ef4444', sub:'#4a5578', blue:'#4f8ef0' };
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:999;background:var(--bg2);border:2px solid ${borders[type]||borders.green};border-radius:12px;padding:14px 28px;font-size:14px;font-weight:700;color:${colors[type]||colors.green};box-shadow:0 4px 24px rgba(0,0,0,.5);animation:fi .3s ease;text-align:center;white-space:nowrap;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function toggleRoomCode() {
+  const badge = document.getElementById('rcBadge');
+  const btn = document.getElementById('toggleCodeBtn');
+  if (!badge) return;
+  const visible = badge.style.display !== 'none';
+  badge.style.display = visible ? 'none' : 'block';
+  btn.textContent = visible ? '🔑 코드 보기' : '🙈 코드 가리기';
+}
+
+// ── 전체 입찰 로그 CSV 다운로드 ──
+function downloadBidLog() {
+  if (!fullBidLog.length && !players.length) { alert('기록이 없습니다!'); return; }
+
+  let csv = '\uFEFF순서,선수닉네임,입찰팀장,입찰금액,시간,결과\n';
+  fullBidLog.forEach((b, i) => {
+    csv += `${i+1},${b.playerNick},${b.capName},${b.amount},${b.ts},${b.result||'입찰'}\n`;
+  });
+  csv += '\n\n=== 최종 낙찰 결과 ===\n팀장,낙찰선수,낙찰금액,티어,포지션\n';
+  captains.forEach(c => {
+    c.members.forEach(m => {
+      const p = players.find(pl => pl.nick === m.nick);
+      csv += `${c.name},${m.nick},${m.price},${p?.tier||''},${p?.role||''}\n`;
+    });
+  });
+  csv += '\n=== 팀장 잔여 포인트 ===\n팀장,잔여포인트\n';
+  captains.forEach(c => { csv += `${c.name},${c.points}\n`; });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `강세원배_경매_로그_${new Date().toLocaleDateString('ko')}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ── 경매 결과 요약 화면 ──
+function showResultSummary() {
+  const grid = document.getElementById('resultGrid');
+  grid.innerHTML = captains.map(c => {
+    const totalSpent = 400 - c.points;
+    return `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#17140a,#1e1a10);padding:12px 14px;border-bottom:1px solid #2a2010;">
+        <div style="font-family:'Black Han Sans',sans-serif;font-size:16px;color:var(--gold);">${c.order}. ${c.name}</div>
+        <div style="display:flex;gap:12px;margin-top:4px;">
+          <span style="font-size:11px;color:var(--muted);">사용 <strong style="color:var(--white);">${totalSpent}점</strong></span>
+          <span style="font-size:11px;color:var(--muted);">잔여 <strong style="color:${c.points<50?'var(--red)':'var(--green)'};">${c.points}점</strong></span>
+        </div>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;">
+        <div style="font-size:10px;color:var(--gold);font-weight:700;padding:4px 8px;background:#17140a;border-radius:6px;text-align:center;">👑 ${c.name}</div>
+        ${c.members.map(m => {
+          const p = players.find(pl => pl.nick === m.nick);
+          return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 10px;">
+            <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:2px;">${m.nick}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <span style="font-size:10px;color:var(--gold);">${TIER_EM[p?.tier]||''} ${p?.tier||''}</span>
+              <span style="font-size:10px;color:var(--sub);">${ROLE_EM[p?.role]||''} ${p?.role||''}</span>
+              <span style="font-size:10px;color:var(--green);margin-left:auto;font-weight:700;">${m.price}점</span>
+            </div>
+            ${p?.appeal ? `<div style="font-size:10px;color:var(--muted);margin-top:3px;font-style:italic;">💬 ${p.appeal}</div>` : ''}
+          </div>`;
+        }).join('')}
+        ${Array.from({length: Math.max(0, 4-c.members.length)}, (_,i) =>
+          `<div style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:7px 10px;font-size:11px;color:var(--muted);text-align:center;">빈 슬롯 ${c.members.length+i+1}</div>`
+        ).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('resultOverlay').style.display = 'flex';
+}
+
+// ── 경매 순서 드래그 변경 ──
+let dragSrcIdx = null;
+
+function initDrag(el, idx) {
+  el.draggable = true;
+  el.addEventListener('dragstart', e => {
+    dragSrcIdx = idx;
+    e.dataTransfer.effectAllowed = 'move';
+    el.style.opacity = '0.5';
+  });
+  el.addEventListener('dragend', () => { el.style.opacity = ''; });
+  el.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.style.borderColor = 'var(--gold)'; });
+  el.addEventListener('dragleave', () => { el.style.borderColor = ''; });
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.style.borderColor = '';
+    if (dragSrcIdx === null || dragSrcIdx === idx) return;
+    // 낙찰/유찰된 선수는 순서 변경 불가
+    const active = getActivePlayers();
+    const src = active[dragSrcIdx];
+    const dst = active[idx];
+    if (!src || !dst) return;
+    if (src.soldTo !== null || dst.soldTo !== null) {
+      alert('이미 낙찰/유찰된 선수의 순서는 변경할 수 없습니다'); return;
+    }
+    // players 배열에서 실제 인덱스 찾아 swap
+    const srcPlayerIdx = players.indexOf(src);
+    const dstPlayerIdx = players.indexOf(dst);
+    if (srcPlayerIdx === -1 || dstPlayerIdx === -1) return;
+    [players[srcPlayerIdx], players[dstPlayerIdx]] = [players[dstPlayerIdx], players[srcPlayerIdx]];
+    // currentIdx도 업데이트
+    if (currentIdx === dragSrcIdx) currentIdx = idx;
+    else if (currentIdx === idx) currentIdx = dragSrcIdx;
+    dragSrcIdx = null;
+    pushState();
+    renderAll();
+  });
+}
+
+function showReaBanner() {
+  const b = document.createElement('div');
+  b.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:200;background:linear-gradient(135deg,#1a0a0a,#2a1010);border:2px solid var(--red);border-radius:12px;padding:14px 26px;text-align:center;animation:fa 2.5s ease forwards;';
+  b.innerHTML = `<div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:3px;">🔁 유찰 인원 재경매 시작</div><div style="font-size:11px;color:var(--sub);">유찰 순서대로 진행됩니다</div>`;
+  document.body.appendChild(b);
+  setTimeout(() => b.remove(), 2500);
+}
+
+function showEndScreen() {
+  document.querySelector('.stage').innerHTML = `
+    <div style="padding:40px;text-align:center;">
+      <div style="font-size:56px;margin-bottom:16px;">🏆</div>
+      <div style="font-family:'Black Han Sans',sans-serif;font-size:32px;color:var(--gold);margin-bottom:10px;">경매 완료!</div>
+      <div style="font-size:13px;color:var(--sub);margin-bottom:24px;">모든 팀 구성이 완료되었습니다</div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:28px;">
+        <button onclick="showResultSummary()" style="background:linear-gradient(135deg,var(--gold),var(--gold2));color:#07090f;font-size:14px;font-weight:700;padding:12px 28px;border-radius:10px;border:none;cursor:pointer;">📊 결과 요약 보기 (캡처용)</button>
+        <button onclick="downloadBidLog()" style="background:linear-gradient(135deg,#0a1a10,#102a18);color:var(--green);border:1px solid var(--green);font-size:14px;font-weight:700;padding:12px 24px;border-radius:10px;cursor:pointer;">📥 전체 로그 CSV</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;max-width:800px;margin:0 auto;">
+        ${captains.map(c=>`
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
+            <div style="font-size:10px;color:var(--gold);font-weight:700;margin-bottom:4px;">${c.order}번 ${c.name}</div>
+            <div style="font-size:9px;color:var(--muted);margin-bottom:6px;">잔여 ${c.points}점</div>
+            ${c.members.map(m=>`<div style="font-size:10px;color:var(--sub);padding:3px 0;border-bottom:1px solid var(--border);">⚔️ ${m.nick} <span style="color:var(--gold);">${m.price}점</span></div>`).join('')}
+          </div>`).join('')}
+      </div>
+    </div>`;
+  pushState();
+}
+
+// 키보드
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'Enter') placeBid();
+  if (e.key === ' ') { e.preventDefault(); confirmSold(); }
+});
+
+// ── 실시간 채팅 ──
+let chatOpen = false;
+let chatUnreadCount = 0;
+let chatMyName = '진행자';
+let chatInited = false;
+let chatCurrentTab = 'chat';
+let chatPresenceRef = null;
+let chatBannedRef = null;
+let chatUsers = {}; // name -> {bannedUntil}
+
+function initChat(myName) {
+  chatMyName = myName;
+  if (chatInited) return;
+  chatInited = true;
+  const chatRef = db.ref('chat/' + roomCode);
+  const presenceRef = db.ref('chatPresence/' + roomCode);
+  const bannedRef = db.ref('chatBanned/' + roomCode);
+  window._chatRef = chatRef;
+  window._presenceRef = presenceRef;
+  window._bannedRef = bannedRef;
+
+  // 진행자 참여 등록
+  const myKey = myName.replace(/[.#$/[\]]/g, '_');
+  presenceRef.child(myKey).set({ name: myName, role: 'host', joinedAt: Date.now() });
+  presenceRef.child(myKey).onDisconnect().remove();
+
+  // 참여자 목록 구독
+  presenceRef.on('value', snap => {
+    chatUsers = {};
+    snap.forEach(child => { chatUsers[child.val().name] = child.val(); });
+    renderUserList();
+    const cnt = Object.keys(chatUsers).length;
+    const el = document.getElementById('userCount');
+    if (el) el.textContent = cnt;
+  });
+
+  // 채팅 메시지 구독
+  chatRef.limitToLast(80).on('child_added', snap => {
+    const m = snap.val();
+    if (!m) return;
+    appendChatMsg(m);
+    if (!chatOpen || chatCurrentTab !== 'chat') {
+      chatUnreadCount++;
+      const badge = document.getElementById('chatUnread');
+      if (badge) { badge.style.display = 'flex'; badge.textContent = chatUnreadCount > 9 ? '9+' : chatUnreadCount; }
+    }
+  });
+}
+
+function renderUserList() {
+  const list = document.getElementById('userList');
+  if (!list) return;
+  const now = Date.now();
+  list.innerHTML = Object.values(chatUsers).map(u => {
+    const isBanned = u.bannedUntil && u.bannedUntil > now;
+    const isHost = u.role === 'host';
+    const remaining = isBanned ? Math.ceil((u.bannedUntil - now) / 60000) : 0;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border:1px solid ${isBanned?'var(--red)':isHost?'var(--gold)':'var(--border)'};border-radius:8px;">
+      <div>
+        <span style="font-size:13px;font-weight:700;color:${isHost?'var(--gold)':'var(--white)'};">${isHost?'👑 ':''}${escChat(u.name)}</span>
+        ${isBanned?`<span style="font-size:10px;color:var(--red);margin-left:6px;">🚫 ${remaining}분 남음</span>`:''}
+      </div>
+      ${!isHost?`<button onclick="banUser('${u.name.replace(/'/g,"\\'")}')" style="background:${isBanned?'linear-gradient(135deg,#1a0808,#2a1010)':'linear-gradient(135deg,#2a0a0a,#3a1010)'};color:var(--red);border:1px solid var(--red);font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer;">${isBanned?'🔓 해제':'🚫 금지'}</button>`:''}
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">참여자가 없습니다</div>';
+}
+
+function banUser(name) {
+  const presenceRef = window._presenceRef;
+  if (!presenceRef) return;
+  const now = Date.now();
+  // 현재 금지 상태 확인
+  const user = chatUsers[name];
+  if (user && user.bannedUntil && user.bannedUntil > now) {
+    // 이미 금지 → 해제
+    if (!confirm(`"${name}" 채팅 금지를 해제할까요?`)) return;
+    const key = name.replace(/[.#$/[\]]/g, '_');
+    presenceRef.child(key).update({ bannedUntil: 0 });
+    db.ref('chatBanned/' + roomCode + '/' + key).remove();
+    showToast(`🔓 ${name} 채팅 금지 해제`, 'green');
+  } else {
+    if (!confirm(`"${name}"을 30분간 채팅 금지할까요?`)) return;
+    const bannedUntil = now + 30 * 60 * 1000;
+    const key = name.replace(/[.#$/[\]]/g, '_');
+    presenceRef.child(key).update({ bannedUntil });
+    db.ref('chatBanned/' + roomCode + '/' + key).set({ name, bannedUntil });
+    // 시스템 메시지
+    window._chatRef.push({ name: '🔔 시스템', role: 'system', text: `${name}님이 30분간 채팅 금지되었습니다.`, time: new Date().toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}), ts: now });
+    showToast(`🚫 ${name} 30분 채팅 금지`, 'red');
+  }
+}
+
+function switchChatTab(tab) {
+  chatCurrentTab = tab;
+  const chatContent = document.getElementById('chatTabContent');
+  const usersContent = document.getElementById('usersTabContent');
+  const chatTabBtn = document.getElementById('chatTab');
+  const usersTabBtn = document.getElementById('usersTab');
+  if (tab === 'chat') {
+    chatContent.style.display = 'flex';
+    usersContent.style.display = 'none';
+    chatTabBtn.style.cssText = 'background:linear-gradient(135deg,var(--blue),#3a6fd0);color:#fff;border:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px 0 0 6px;cursor:pointer;';
+    usersTabBtn.style.cssText = 'background:var(--bg3);color:var(--sub);border:1px solid var(--border);border-left:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:0 6px 6px 0;cursor:pointer;';
+    chatContent.scrollTop = chatContent.scrollHeight;
+  } else {
+    chatContent.style.display = 'none';
+    usersContent.style.display = 'block';
+    usersTabBtn.style.cssText = 'background:linear-gradient(135deg,var(--blue),#3a6fd0);color:#fff;border:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:0 6px 6px 0;cursor:pointer;';
+    chatTabBtn.style.cssText = 'background:var(--bg3);color:var(--sub);border:1px solid var(--border);border-right:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px 0 0 6px;cursor:pointer;';
+    renderUserList();
+  }
+}
+
+function appendChatMsg(m) {
+  const box = document.getElementById('chatTabContent');
+  if (!box) return;
+  const isMe = m.name === chatMyName;
+  const isHost = m.role === 'host';
+  const isSystem = m.role === 'system';
+  if (isSystem) {
+    const el = document.createElement('div');
+    el.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:4px 0;';
+    el.textContent = m.text;
+    const placeholder = box.querySelector('.chat-placeholder');
+    if (placeholder) placeholder.remove();
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+    return;
+  }
+  const nameColor = isHost ? '#f0a040' : isMe ? 'var(--green)' : 'var(--blue)';
+  const el = document.createElement('div');
+  el.style.cssText = `display:flex;flex-direction:column;align-items:${isMe?'flex-end':'flex-start'};gap:2px;`;
+  el.innerHTML = `<div style="font-size:10px;color:${nameColor};font-weight:700;">${isHost?'👑 ':''}${escChat(m.name)}</div><div style="max-width:480px;padding:7px 11px;border-radius:${isMe?'12px 4px 12px 12px':'4px 12px 12px 12px'};background:${isMe?'linear-gradient(135deg,#1a2a50,#2a3a70)':'var(--bg3)'};border:1px solid ${isMe?'var(--blue)':'var(--border)'};font-size:13px;line-height:1.4;word-break:break-word;">${escChat(m.text)}</div><div style="font-size:9px;color:var(--muted);">${m.time||''}</div>`;
+  const placeholder = box.querySelector('.chat-placeholder');
+  if (placeholder) placeholder.remove();
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+function escChat(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function sendChat() {
+  const inp = document.getElementById('chatInput');
+  const text = (inp.value||'').trim();
+  if (!text) return;
+  inp.value = '';
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  (window._chatRef || db.ref('chat/' + roomCode)).push({ name: chatMyName, role: 'host', text, time, ts: Date.now() });
+}
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chatPanel');
+  panel.style.display = chatOpen ? 'flex' : 'none';
+  if (chatOpen) {
+    chatUnreadCount = 0;
+    const badge = document.getElementById('chatUnread');
+    if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+    const box = document.getElementById('chatTabContent');
+    if (box) box.scrollTop = box.scrollHeight;
+    setTimeout(() => document.getElementById('chatInput')?.focus(), 100);
+  }
+}
+</script>
+
+<!-- 플로팅 채팅 -->
+<div id="chatBtn" onclick="toggleChat()" title="채팅" style="position:fixed;bottom:24px;right:24px;z-index:500;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#1a2a50,#252d60);border:2px solid var(--blue);box-shadow:0 4px 20px rgba(79,142,240,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;transition:transform .15s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">💬</div>
+<div id="chatUnread" style="display:none;position:fixed;bottom:62px;right:18px;z-index:501;background:var(--red);color:#fff;font-size:10px;font-weight:800;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;"></div>
+<div id="chatPanel" style="display:none;position:fixed;bottom:90px;right:24px;z-index:499;width:640px;height:720px;background:var(--bg2);border:1px solid var(--blue);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.5);flex-direction:column;overflow:hidden;">
+  <!-- 헤더 -->
+  <div style="padding:10px 16px;background:linear-gradient(135deg,#0d1a30,#1a2540);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;gap:0;">
+      <button id="chatTab" onclick="switchChatTab('chat')" style="background:linear-gradient(135deg,var(--blue),#3a6fd0);color:#fff;border:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px 0 0 6px;cursor:pointer;">💬 채팅</button>
+      <button id="usersTab" onclick="switchChatTab('users')" style="background:var(--bg3);color:var(--sub);border:1px solid var(--border);border-left:none;font-size:12px;font-weight:700;padding:6px 14px;border-radius:0 6px 6px 0;cursor:pointer;">👥 참여자 <span id="userCount" style="background:var(--blue);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:3px;">0</span></button>
+    </div>
+    <button onclick="toggleChat()" style="background:none;border:none;color:var(--sub);font-size:20px;cursor:pointer;line-height:1;">×</button>
+  </div>
+  <!-- 채팅 탭 -->
+  <div id="chatTabContent" style="flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;">
+    <div class="chat-placeholder" style="text-align:center;font-size:11px;color:var(--muted);padding:8px 0;">채팅을 시작해보세요!</div>
+  </div>
+  <!-- 참여자 탭 (진행자 전용: 금지 버튼 있음) -->
+  <div id="usersTabContent" style="display:none;flex:1;overflow-y:auto;padding:12px;">
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;letter-spacing:1px;">클릭하면 30분 채팅 금지</div>
+    <div id="userList" style="display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+  <!-- 입력창 -->
+  <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;">
+    <input id="chatInput" placeholder="메시지 입력..." maxlength="100"
+      style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--white);font-size:13px;padding:8px 12px;border-radius:8px;outline:none;"
+      onkeydown="if(event.key==='Enter')sendChat()"
+      onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+    <button onclick="sendChat()" style="background:linear-gradient(135deg,#1a2a50,#2a3a70);border:1px solid var(--blue);color:var(--blue);font-size:13px;font-weight:700;padding:8px 14px;border-radius:8px;cursor:pointer;">전송</button>
+  </div>
+</div>
+</body>
+</html>
